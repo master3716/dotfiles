@@ -57,56 +57,108 @@ mkdir -p "$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$HOME/bin:/opt/nvim-linux-x86_64/bin:$PATH"
 
 # ------------------------------------------------------------------------------
-# 1. System Packages (APT)
+# 1. System Packages (APT / DNF / Pacman)
 # ------------------------------------------------------------------------------
-install_apt_packages() {
-    if ! has_cmd apt-get; then
-        log_warn "apt-get not found. Skipping apt package installation (please install packages manually if needed)."
-        return 0
-    fi
+install_system_packages() {
+    if has_cmd dnf; then
+        log_info "Detected Fedora / RHEL (dnf). Installing system packages..."
+        local fedora_pkgs=(
+            zsh
+            git
+            curl
+            wget
+            unzip
+            ripgrep
+            fd-find
+            bat
+            fzf
+            tree
+            jq
+            tmux
+            python3
+            python3-pip
+            pipx
+            ShellCheck
+            direnv
+            gcc
+            gcc-c++
+            make
+            cmake
+            eza
+            util-linux-user
+        )
+        sudo dnf install -y "${fedora_pkgs[@]}"
+    elif has_cmd apt-get; then
+        log_info "Detected Debian / Ubuntu (apt). Updating package list..."
+        sudo apt-get update -y
 
-    log_info "Updating apt package list..."
-    sudo apt-get update -y
+        local deb_pkgs=(
+            zsh
+            git
+            curl
+            wget
+            unzip
+            build-essential
+            ripgrep
+            fd-find
+            bat
+            fzf
+            tree
+            jq
+            tmux
+            python3
+            python3-pip
+            python3-venv
+            pipx
+            shellcheck
+            direnv
+            gcc
+            g++
+            make
+            cmake
+        )
 
-    local pkgs=(
-        zsh
-        git
-        curl
-        wget
-        unzip
-        build-essential
-        ripgrep
-        fd-find
-        bat
-        fzf
-        tree
-        jq
-        tmux
-        python3
-        python3-pip
-        python3-venv
-        pipx
-        shellcheck
-        direnv
-        gcc
-        g++
-        make
-        cmake
-    )
+        log_info "Installing core system packages..."
+        sudo apt-get install -y "${deb_pkgs[@]}"
 
-    log_info "Installing core system packages..."
-    sudo apt-get install -y "${pkgs[@]}"
-
-    # Setup eza (modern replacement for ls)
-    if ! has_cmd eza; then
-        log_info "Configuring eza package repository..."
-        sudo mkdir -p /etc/apt/keyrings
-        if wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/gierens.gpg 2>/dev/null; then
-            echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null
-            sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list 2>/dev/null || true
-            sudo apt-get update -qq
-            sudo apt-get install -y eza || log_warn "Could not install eza from apt repository."
+        # Setup eza (modern replacement for ls)
+        if ! has_cmd eza; then
+            log_info "Configuring eza package repository..."
+            sudo mkdir -p /etc/apt/keyrings
+            if wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/gierens.gpg 2>/dev/null; then
+                echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null
+                sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list 2>/dev/null || true
+                sudo apt-get update -qq
+                sudo apt-get install -y eza || log_warn "Could not install eza from apt repository."
+            fi
         fi
+    elif has_cmd pacman; then
+        log_info "Detected Arch Linux (pacman). Installing system packages..."
+        local arch_pkgs=(
+            zsh
+            git
+            curl
+            wget
+            unzip
+            base-devel
+            ripgrep
+            fd
+            bat
+            fzf
+            tree
+            jq
+            tmux
+            python
+            python-pip
+            python-pipx
+            shellcheck
+            direnv
+            cmake
+            eza
+        )
+        sudo pacman -Syu --noconfirm "${arch_pkgs[@]}"
+    else
+        log_warn "No supported package manager (dnf, apt-get, pacman) found. Please install core packages manually."
     fi
 }
 
@@ -321,7 +373,7 @@ main() {
     printf "%b   Installing Dotfiles & Shell Setup    %b\n" "${BOLD}" "${NC}"
     printf "%b========================================%b\n\n" "${BOLD}" "${NC}"
 
-    install_apt_packages
+    install_system_packages
     install_modern_tools
     install_zsh_ecosystem
     deploy_configs

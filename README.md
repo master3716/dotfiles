@@ -1,6 +1,11 @@
 # Dotfiles & Development Environment
 
-Automated configuration and dotfiles to reproduce my exact WSL / Linux terminal setup on any fresh machine.
+Automated configuration and dotfiles to reproduce my exact terminal setup on any fresh machine.
+
+### 🐧 Supported Distributions
+* **Fedora / RHEL / CentOS Stream** (`dnf`)
+* **Ubuntu / Debian / WSL / Pop!_OS** (`apt`)
+* **Arch Linux / Manjaro** (`pacman`)
 
 ---
 
