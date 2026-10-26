@@ -147,7 +147,10 @@ install_modern_tools() {
         local LG_ARCH="x86_64"
         [ "$ARCH" = "aarch64" ] && LG_ARCH="arm64"
         local LG_VER
-        LG_VER="$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || echo "")"
+        LG_VER="$(curl -sI https://github.com/jesseduffield/lazygit/releases/latest | grep -i "^location:" | sed -E 's/.*tag\/(v[0-9.]+).*/\1/' | tr -d '\r\n' || echo "")"
+        if [ -z "$LG_VER" ]; then
+            LG_VER="$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' || echo "")"
+        fi
         if [ -n "$LG_VER" ]; then
             curl -fsSLo /tmp/lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/${LG_VER}/lazygit_${LG_VER#v}_Linux_${LG_ARCH}.tar.gz"
             tar -xzf /tmp/lazygit.tar.gz -C /tmp lazygit
@@ -177,6 +180,7 @@ install_modern_tools() {
         if has_cmd sudo; then
             sudo rm -rf /opt/nvim-linux-x86_64
             sudo tar -C /opt -xzf /tmp/nvim-linux-x86_64.tar.gz
+            ln -sf /opt/nvim-linux-x86_64/bin/nvim "$HOME/.local/bin/nvim" 2>/dev/null || true
         else
             mkdir -p "$HOME/.local/opt"
             rm -rf "$HOME/.local/opt/nvim-linux-x86_64"
