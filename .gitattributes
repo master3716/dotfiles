@@ -1,0 +1,8 @@
+# Force LF line endings for all text files
+* text=auto eol=lf
+*.sh text eol=lf
+*.zsh text eol=lf
+*.lua text eol=lf
+*.kdl text eol=lf
+*.json text eol=lf
+*.md text eol=lf

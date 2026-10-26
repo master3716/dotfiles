@@ -1,0 +1,14 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor backup & swap files
+*.swp
+*.swo
+*.bak
+*.backup
+*~
+
+# Local history & temp files
+*.tmp
+*.log
