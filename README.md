@@ -102,8 +102,9 @@ exec zsh
 
 ---
 
-## 🎨 Recommended Font
+## 🎨 Font Support (MesloLGS NF)
 
-For icons in Powerlevel10k and `eza`, install a [Nerd Font](https://www.nerdfonts.com/) on your terminal/host machine:
-* **MesloLGS NF** (Recommended for Powerlevel10k)
-* JetBrains Mono Nerd Font
+`install.sh` automatically downloads and installs all 4 official **MesloLGS NF** font variants (Regular, Bold, Italic, Bold Italic) into `~/.local/share/fonts` and updates the font cache.
+
+* **In your terminal emulator** (Ptyxis, GNOME Terminal, Alacritty, Kitty, Windows Terminal, etc.):
+  Go to Settings / Preferences -> Appearance -> Font -> select **MesloLGS NF Regular**.

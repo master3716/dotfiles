@@ -140,7 +140,40 @@ install_zsh_ecosystem() {
 }
 
 # ------------------------------------------------------------------------------
-# 3. System Packages (APT / DNF / Pacman)
+# 3. MesloLGS NF Font (Recommended for Powerlevel10k)
+# ------------------------------------------------------------------------------
+install_meslo_font() {
+    log_info "Installing MesloLGS NF fonts for Powerlevel10k..."
+    local font_dir="$HOME/.local/share/fonts/MesloLGS_NF"
+    mkdir -p "$font_dir"
+
+    local base_url="https://github.com/romkatv/powerlevel10k-media/raw/master"
+    local font_files=(
+        "MesloLGS NF Regular.ttf"
+        "MesloLGS NF Bold.ttf"
+        "MesloLGS NF Italic.ttf"
+        "MesloLGS NF Bold Italic.ttf"
+    )
+
+    for font in "${font_files[@]}"; do
+        local dest="${font_dir}/${font}"
+        if [ ! -f "$dest" ]; then
+            log_info "Downloading ${font}..."
+            local encoded_font="${font// /%20}"
+            curl -fsSL "${base_url}/${encoded_font}" -o "$dest" 2>/dev/null || log_warn "Failed to download ${font}"
+        fi
+    done
+
+    # Refresh system font cache if fc-cache exists
+    if has_cmd fc-cache; then
+        log_info "Updating font cache..."
+        fc-cache -f "$font_dir" >/dev/null 2>&1 || true
+    fi
+    log_success "MesloLGS NF fonts installed in ${font_dir}."
+}
+
+# ------------------------------------------------------------------------------
+# 4. System Packages (APT / DNF / Pacman)
 # ------------------------------------------------------------------------------
 install_system_packages() {
     if has_cmd dnf; then
@@ -166,6 +199,7 @@ install_system_packages() {
             gcc-c++
             make
             cmake
+            fontconfig
             util-linux-user
         )
         # Use --setopt=strict=0 and --skip-broken so unavailable optional packages do not abort installation
@@ -204,6 +238,7 @@ install_system_packages() {
             g++
             make
             cmake
+            fontconfig
         )
 
         log_info "Installing core system packages..."
@@ -244,6 +279,7 @@ install_system_packages() {
             direnv
             cmake
             eza
+            fontconfig
         )
         sudo pacman -S --noconfirm --needed "${arch_pkgs[@]}" || log_warn "Some pacman packages failed to install."
     else
@@ -411,18 +447,23 @@ main() {
     # Step 2: Install Oh My Zsh + Powerlevel10k + plugins
     install_zsh_ecosystem
 
-    # Step 3: Install core system packages
+    # Step 3: Install MesloLGS NF fonts (for Powerlevel10k & icon glyphs)
+    install_meslo_font
+
+    # Step 4: Install core system packages
     install_system_packages
 
-    # Step 4: Install modern CLI utilities (eza, zellij, lazygit, neovim, etc.)
+    # Step 5: Install modern CLI utilities (eza, zellij, lazygit, neovim, etc.)
     install_modern_tools
 
-    # Step 5: Switch shell to Zsh
+    # Step 6: Switch shell to Zsh
     set_default_shell
 
     printf "\n%b========================================%b\n" "${GREEN}${BOLD}" "${NC}"
     printf "%bSetup completed successfully!%b\n" "${GREEN}${BOLD}" "${NC}"
     printf "%b========================================%b\n\n" "${GREEN}${BOLD}" "${NC}"
+    printf "MesloLGS NF fonts have been installed to %b~/.local/share/fonts%b.\n" "${BOLD}" "${NC}"
+    printf "(In your terminal emulator settings, select font: %bMesloLGS NF%b)\n\n" "${BOLD}" "${NC}"
     printf "To start using your new environment right now, run:\n"
     printf "  %bexec zsh%b\n\n" "${BOLD}" "${NC}"
 }
