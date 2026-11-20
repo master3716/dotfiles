@@ -1,0 +1,706 @@
+//@ pragma UseQApplication
+//@ pragma Env QT_QUICK_CONTROLS_STYLE=Basic
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import Quickshell.Hyprland
+import Quickshell.Wayland
+import "components"
+import "modules"
+import "services"
+
+ShellRoot {
+    id: root
+
+    readonly property bool shellHidden: Config.gameMode && Config.gameHideShell
+
+    // Deferred: the surface has only just been switched on, so its window
+    // does not exist yet this frame and a pulse would play to nothing.
+    function announceGlyph(which: string): void {
+        if (which === "bar" || which === "strip")
+            glyphHello.restart();
+    }
+
+    Timer {
+        id: glyphHello
+        interval: 180
+        onTriggered: GlyphEvents.pulse("notify")
+    }
+
+    // A singleton is built the first time something reads it, and nothing
+    // reads these two until the settings page is opened. They have to be
+    // alive from the start instead: between them they are what puts the
+    // chosen layout and the window border colour back when the files under
+    // ~/.config/hypr and the settings have drifted apart.
+    //
+    // Same for these two, which act at login rather than when opened: the
+    // night light's schedule and "restore at login", and the startup apps
+    // chosen in Settings > System (once per Hyprland session, see there).
+    Component.onCompleted: {
+        void WindowLayout.probed;
+        void HyprAccent.saved;
+        void NightLight.available;
+        void Autostart.ran;
+        void Drives.available;
+        // Only acts when "Dimmer in the evening" is on; otherwise a
+        // `command -v ddcutil` and nothing more.
+        void Ddc.available;
+        void ConfigBackup.list;
+        // Starts KDE Connect's daemon if installed and wanted (Phone).
+        void Phone.available;
+        void Polkit.registered;
+    }
+
+    Binding {
+        target: Quickshell
+        property: "watchFiles"
+        value: !Lock.locked
+    }
+
+    PanelWindow {
+        id: idleSurface
+        implicitWidth: 1
+        implicitHeight: 1
+        color: "transparent"
+        anchors { top: true; left: true }
+        exclusionMode: ExclusionMode.Ignore
+        mask: Region {}
+        WlrLayershell.layer: WlrLayer.Background
+        WlrLayershell.namespace: "nothing-idle-inhibit"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+    }
+
+    IdleInhibitor {
+        window: idleSurface
+        enabled: Idle.inhibited
+    }
+
+    // ── Per screen ────────────────────────────────────────────────────
+    Variants {
+        model: Config.drawWallpaper ? Quickshell.screens : []
+        Wallpaper {}
+    }
+
+    // The one thing every fresh launch gets that nothing else here
+    // does: everything else below already exists by the time this
+    // reads, whole and in place, waiting on this to let it be seen.
+    Variants {
+        model: root.shellHidden ? [] : Quickshell.screens
+        BootCurtain {}
+    }
+
+    Variants {
+        model: root.shellHidden ? [] : Quickshell.screens
+        Bar {}
+    }
+
+    Variants {
+        model: (Config.showDock && !root.shellHidden) ? Quickshell.screens : []
+        Dock {}
+    }
+
+    Variants {
+        model: Config.osdEnabled ? Quickshell.screens : []
+        Osd {}
+    }
+
+    Variants {
+        model: (Config.osdEnabled && Config.glyphEnabled) ? Quickshell.screens : []
+        GlyphOsd {}
+    }
+
+    // One widget set per screen, like the Glyph Matrix.
+    Variants {
+        model: Config.showDesktopWidgets ? Quickshell.screens : []
+        Desktop {}
+    }
+
+    // Essential Apps live in their own column on the right, so the
+    // rice's widgets on the left keep a layout nothing generated can
+    // reach into.
+    Variants {
+        model: (Config.showDeskApps && !root.shellHidden) ? Quickshell.screens : []
+        AppsColumn {}
+    }
+
+    // Right-click the desktop to edit it.
+    Variants {
+        model: root.shellHidden ? [] : Quickshell.screens
+        DesktopEdit {}
+    }
+
+    // One Glyph Matrix per screen: otherwise it only appears on screens[0],
+    // often the laptop, while we work on the external display.
+    // Two models: hot-swapping the layer is unreliable, so the window is
+    // recreated when glyphAbove flips.
+    Variants {
+        model: (Config.glyphEnabled && !Config.glyphAbove && !root.shellHidden)
+            ? Quickshell.screens : []
+        GlyphWidget { above: false }
+    }
+
+    Variants {
+        model: (Config.glyphEnabled && Config.glyphAbove && !root.shellHidden)
+            ? Quickshell.screens : []
+        GlyphWidget { above: true }
+    }
+
+    // Both layers, always, and both stay mapped. The widget decides which
+    // of the two paints and takes input: see GlyphBarWidget.showing.
+    Variants {
+        model: (Config.glyphBarEnabled && !root.shellHidden)
+            ? Quickshell.screens : []
+        GlyphBarWidget { above: false }
+    }
+
+    Variants {
+        model: (Config.glyphBarEnabled && !root.shellHidden)
+            ? Quickshell.screens : []
+        GlyphBarWidget { above: true }
+    }
+
+    Variants {
+        model: (Config.glyphStripEnabled && !root.shellHidden)
+            ? Quickshell.screens : []
+        GlyphStripWidget { above: false }
+    }
+
+    Variants {
+        model: (Config.glyphStripEnabled && !root.shellHidden)
+            ? Quickshell.screens : []
+        GlyphStripWidget { above: true }
+    }
+
+    // Panels exist on every screen and only show on the focused one:
+    // opening settings from the secondary display shows them there, not
+    // on the primary.
+    Variants {
+        model: Config.notificationsEnabled ? Quickshell.screens : []
+        Notifications {}
+    }
+
+    // Not behind a LazyLoader with the rest below: the one moment this
+    // has to be ready is exactly the moment a reload just failed, which
+    // is a bad time to be building a QML tree for the first time.
+    Variants { model: Quickshell.screens; ReloadPopup {} }
+    Variants { model: Quickshell.screens; WallpaperPopup {} }
+
+    // Built the first time each is actually opened, not at shell launch:
+    // these 14 sat fully instantiated on every screen from the start,
+    // most of them untouched for the whole session. OpenLatch remembers
+    // "opened at least once" so closing one again does not tear its tree
+    // down and rebuild it on the next open.
+    OpenLatch { id: settingsLatch; open: GlobalState.settingsOpen }
+    LazyLoader {
+        active: settingsLatch.touched
+        Variants { model: Quickshell.screens; Settings {} }
+    }
+
+    OpenLatch { id: nothingLauncherLatch; open: GlobalState.launcherNothingOpen }
+    LazyLoader {
+        active: nothingLauncherLatch.touched
+        Variants { model: Quickshell.screens; NothingLauncher {} }
+    }
+
+    OpenLatch { id: launcherLatch; open: GlobalState.launcherOpen }
+    LazyLoader {
+        active: launcherLatch.touched
+        Variants { model: Quickshell.screens; Launcher {} }
+    }
+
+    OpenLatch { id: sessionLatch; open: GlobalState.sessionOpen }
+    LazyLoader {
+        active: sessionLatch.touched
+        Variants { model: Quickshell.screens; Session {} }
+    }
+
+    OpenLatch { id: screenshotLatch; open: GlobalState.screenshotOpen }
+    LazyLoader {
+        active: screenshotLatch.touched
+        Variants { model: Quickshell.screens; Screenshot {} }
+    }
+
+    OpenLatch { id: gameBarLatch; open: GlobalState.gameBarOpen }
+    LazyLoader {
+        active: gameBarLatch.touched
+        Variants { model: Quickshell.screens; GameBar {} }
+    }
+
+    OpenLatch { id: regionPickerLatch; open: Shot.picking || Recorder.picking }
+    LazyLoader {
+        active: regionPickerLatch.touched
+        Variants { model: Quickshell.screens; RegionPicker {} }
+    }
+
+    OpenLatch { id: cheatsheetLatch; open: GlobalState.cheatsheetOpen }
+    LazyLoader {
+        active: cheatsheetLatch.touched
+        Variants { model: Quickshell.screens; Cheatsheet {} }
+    }
+
+    OpenLatch { id: saverLatch; open: GlobalState.screensaverOn }
+    LazyLoader {
+        active: saverLatch.touched
+        Variants { model: Quickshell.screens; Screensaver {} }
+    }
+
+    OpenLatch { id: displaysLatch; open: GlobalState.displaysOpen }
+    LazyLoader {
+        active: displaysLatch.touched
+        Variants { model: Quickshell.screens; DisplayPanel {} }
+    }
+
+    // On every screen, deliberately: the one that went dark is the one
+    // that cannot show you the way back.
+    OpenLatch { id: displayConfirmLatch; open: Displays.confirming }
+    LazyLoader {
+        active: displayConfirmLatch.touched
+        Variants { model: Quickshell.screens; DisplayConfirm {} }
+    }
+
+    OpenLatch { id: essentialLatch; open: GlobalState.essentialOpen }
+    LazyLoader {
+        active: essentialLatch.touched
+        Variants { model: Quickshell.screens; Essential {} }
+    }
+
+    OpenLatch { id: essentialAppsLatch; open: GlobalState.appsOpen }
+    LazyLoader {
+        active: essentialAppsLatch.touched
+        Variants { model: Quickshell.screens; EssentialApps {} }
+    }
+
+    OpenLatch { id: essentialFlyLatch; open: GlobalState.essentialFlyPath !== "" }
+    LazyLoader {
+        active: essentialFlyLatch.touched
+        Variants { model: Quickshell.screens; EssentialFly {} }
+    }
+
+    OpenLatch { id: notifCenterLatch; open: GlobalState.notifCenterOpen }
+    LazyLoader {
+        active: notifCenterLatch.touched
+        Variants { model: Quickshell.screens; NotificationCenter {} }
+    }
+
+    OpenLatch { id: polkitLatch; open: GlobalState.polkitOpen }
+    LazyLoader {
+        active: polkitLatch.touched
+        Variants { model: Quickshell.screens; PolkitDialog {} }
+    }
+
+    OpenLatch { id: wallpaperPickerLatch; open: GlobalState.wallpaperPickerOpen }
+    LazyLoader {
+        active: wallpaperPickerLatch.touched
+        Variants { model: Quickshell.screens; WallpaperPicker {} }
+    }
+
+    // One instance only: WlSessionLock raises a surface per monitor
+    // by itself.
+    LockScreen {}
+
+    // The crosshair lives on every screen, unmasked: never clickable.
+    Variants {
+        model: Config.crosshair ? Quickshell.screens : []
+        Crosshair {}
+    }
+
+    // ── Commands ──────────────────────────────────────────────────────
+    // Everything is centralised here: modules are instantiated per screen,
+    // an IpcHandler declared inside one would be rejected as a duplicate.
+
+    IpcHandler {
+        target: "bar"
+        function toggle(): void { GlobalState.controlCenterOpen = !GlobalState.controlCenterOpen; }
+        function open(): void { GlobalState.controlCenterOpen = true; }
+        function hide(): void { GlobalState.controlCenterOpen = false; }
+    }
+
+    IpcHandler {
+        target: "nothing"
+        function toggle(): void {
+            GlobalState.launcherNothingOpen = !GlobalState.launcherNothingOpen;
+        }
+        function open(): void { GlobalState.launcherNothingOpen = true; }
+        function hide(): void { GlobalState.launcherNothingOpen = false; }
+    }
+
+    IpcHandler {
+        target: "glyph"
+
+        // Walks off, Matrix, Bar, Strip and back to off. The surface that
+        // comes up announces itself with its own notification rhythm, so
+        // the shortcut tells you where you landed without a toast: on a
+        // Glyph, the Glyph is the feedback.
+        function next(): void { root.announceGlyph(Config.cycleGlyph(1)); }
+        function prev(): void { root.announceGlyph(Config.cycleGlyph(-1)); }
+        function off(): void {
+            Config.enableGlyph(Config.activeGlyph(), false);
+        }
+        function matrix(): void { Config.enableGlyph("matrix", true); }
+        function bar(): void { root.announceGlyph("bar"); Config.enableGlyph("bar", true); }
+        function strip(): void { root.announceGlyph("strip"); Config.enableGlyph("strip", true); }
+    }
+
+    IpcHandler {
+        target: "shell"
+        function reload(): void { Power.restartShell(); }
+        function reloadAll(): void { Power.reloadAll(); }
+    }
+
+    IpcHandler {
+        target: "launcher"
+        // toggleLauncher clears the query: without that, the launcher
+        // would reopen on the last prefix used.
+        function toggle(): void { GlobalState.toggleLauncher(); }
+        function open(): void { GlobalState.launchWith(""); }
+        function hide(): void { GlobalState.launcherOpen = false; }
+    }
+
+    IpcHandler {
+        target: "settings"
+        function toggle(): void { GlobalState.settingsOpen = !GlobalState.settingsOpen; }
+        function open(): void { GlobalState.settingsOpen = true; }
+        function hide(): void { GlobalState.settingsOpen = false; }
+        // CTRL+SHIFT+Escape: straight to Processes, open or not.
+        function processes(): void {
+            GlobalState.settingsOpen = false;
+            GlobalState.settingsPage = SettingsIndex.pageProcesses;
+            GlobalState.settingsOpen = true;
+        }
+    }
+
+    IpcHandler {
+        target: "lock"
+        function activate(): string {
+            Lock.activate();
+            return Lock.locked && Lock.secure ? "ok" : "pending";
+        }
+        function secure(): string {
+            return Lock.locked && Lock.secure ? "true" : "false";
+        }
+    }
+
+    IpcHandler {
+        target: "session"
+        function toggle(): void { GlobalState.sessionOpen = !GlobalState.sessionOpen; }
+        function open(): void { GlobalState.sessionOpen = true; }
+        function hide(): void { GlobalState.sessionOpen = false; }
+    }
+
+    // Clipboard, emoji and calculator go through the launcher by
+    // pre-filling its prefix. No separate panel to maintain.
+    IpcHandler {
+        target: "clipboard"
+        function toggle(): void { GlobalState.launchWith(";"); }
+        function open(): void { GlobalState.launchWith(";"); }
+        function hide(): void { GlobalState.launcherOpen = false; }
+        function update(): void { Clipboard.refresh(); }
+    }
+
+    IpcHandler {
+        target: "lens"
+        function search(): void { Lens.search(); }
+    }
+
+    IpcHandler {
+        target: "song"
+        function toggle(): void { Songrec.toggle(); }
+    }
+
+    IpcHandler {
+        target: "emoji"
+        function toggle(): void { GlobalState.launchWith(":"); }
+    }
+
+    IpcHandler {
+        target: "calc"
+        function toggle(): void { GlobalState.launchWith("="); }
+    }
+
+    IpcHandler {
+        target: "notifications"
+        function toggle(): void { GlobalState.notifCenterOpen = !GlobalState.notifCenterOpen; }
+        function open(): void { GlobalState.notifCenterOpen = true; }
+        function hide(): void { GlobalState.notifCenterOpen = false; }
+        function clear(): void { Notifs.clearHistory(); }
+        function dnd(): void { Notifs.doNotDisturb = !Notifs.doNotDisturb; }
+    }
+
+    IpcHandler {
+        target: "game"
+        function toggle(): void {
+            if (Recorder.picking) {
+                Recorder.cancelPick();
+                GlobalState.gameBarOpen = true;
+                return;
+            }
+            GlobalState.gameBarOpen = !GlobalState.gameBarOpen;
+        }
+        function open(): void { GlobalState.gameBarOpen = true; }
+        function hide(): void { GlobalState.gameBarOpen = false; }
+        function mode(): void { Game.toggle(); }
+        function crosshair(): void { Config.crosshair = !Config.crosshair; Config.save(); }
+    }
+
+    IpcHandler {
+        target: "displays"
+        function toggle(): void {
+            if (GlobalState.displaysOpen) {
+                GlobalState.displaysOpen = false;
+                return;
+            }
+            GlobalState.closeAll();
+            GlobalState.displaysOpen = true;
+        }
+        function open(): void {
+            GlobalState.closeAll();
+            GlobalState.displaysOpen = true;
+        }
+        function hide(): void { GlobalState.displaysOpen = false; }
+        // Straight to the Light page: brightness, night light, dimming.
+        function light(): void {
+            GlobalState.closeAll();
+            GlobalState.displaysTab = "light";
+            GlobalState.displaysOpen = true;
+        }
+        function refresh(): void { Displays.refresh(); }
+        function extend(): void { Displays.extend(); }
+        function duplicate(): void { Displays.duplicate(); }
+        function only(name: string): void { Displays.only(name); }
+    }
+
+    // Night light from a key or a script: qs ipc call nightlight toggle,
+    // or temperature 3500. Same service the panel and the tile use.
+    IpcHandler {
+        target: "nightlight"
+        function toggle(): void { NightLight.toggle(); }
+        function on(): void { NightLight.setActive(true); }
+        function off(): void { NightLight.setActive(false); }
+        function neutral(): void { NightLight.neutral(); }
+        function temperature(kelvin: int): void { NightLight.setTemperature(kelvin); }
+        function dim(percent: int): void { NightLight.setGamma(percent); }
+        function status(): string { return NightLight.status; }
+    }
+
+    // Caffeine from a key: the same switch as the control centre's. The
+    // bar's cup says it is on; a short notification says which way it
+    // just went, since a key press has nothing else to look at.
+    IpcHandler {
+        target: "caffeine"
+        function toggle(): void {
+            Idle.toggle();
+            Quickshell.execDetached(["notify-send", "-a", "Nothing", "-t", "1500",
+                "-h", "string:x-canonical-private-synchronous:caffeine",
+                Idle.inhibited ? "Caffeine on" : "Caffeine off",
+                Idle.inhibited ? "The screen stays awake until you press SUPER+ALT+I again"
+                               : "Dim, lock and sleep are back on their timers"]);
+        }
+        function on(): void { Idle.apply(true); }
+        function off(): void { Idle.apply(false); }
+        function status(): bool { return Idle.inhibited; }
+    }
+
+    // hypridle's screensaver listener; "show" by hand to try it.
+    IpcHandler {
+        target: "screensaver"
+        function show(): void { GlobalState.screensaverOn = true; }
+        function hide(): void { GlobalState.screensaverOn = false; }
+    }
+
+    // Scripting the wallpaper: set <path> [screen], next, folder <path>.
+    // Dolphin's "Set as wallpaper" context menu (applications/servicemenus) goes through set and setHere.
+    IpcHandler {
+        target: "wallpaper"
+        function set(path: string): void { Wallpapers.set(path, ""); }
+        function setOn(path: string, screen: string): void { Wallpapers.set(path, screen); }
+        function setHere(path: string): void { Wallpapers.set(path, Hyprland.focusedMonitor?.name ?? ""); }
+        function next(): void { Wallpapers.next(); }
+        function folder(path: string): void { Config.wallpaperFolder = path; Config.save(); }
+        function current(): string { return Config.wallpaper; }
+    }
+
+    IpcHandler {
+        target: "wallpaperpicker"
+        function toggle(): void { GlobalState.wallpaperPickerOpen = !GlobalState.wallpaperPickerOpen; }
+        function open(): void { GlobalState.wallpaperPickerOpen = true; }
+        function hide(): void { GlobalState.wallpaperPickerOpen = false; }
+    }
+
+    IpcHandler {
+        target: "cheatsheet"
+        function toggle(): void { GlobalState.cheatsheetOpen = !GlobalState.cheatsheetOpen; }
+        function open(): void { GlobalState.cheatsheetOpen = true; }
+        function hide(): void { GlobalState.cheatsheetOpen = false; }
+    }
+
+    IpcHandler {
+        target: "essential"
+        function toggle(): void {
+            if (!Config.essentialEnabled)
+                return;
+            if (GlobalState.essentialOpen) {
+                GlobalState.essentialOpen = false;
+                return;
+            }
+            GlobalState.closeAll();
+            GlobalState.essentialOpen = true;
+        }
+        function open(): void {
+            if (!Config.essentialEnabled)
+                return;
+            GlobalState.closeAll();
+            GlobalState.essentialOpen = true;
+        }
+        function hide(): void { GlobalState.essentialOpen = false; }
+    }
+
+    IpcHandler {
+        target: "apps"
+        function toggle(): void {
+            if (GlobalState.appsOpen) {
+                GlobalState.appsOpen = false;
+                return;
+            }
+            GlobalState.closeAll();
+            GlobalState.appsOpen = true;
+        }
+        function open(): void {
+            GlobalState.closeAll();
+            GlobalState.appsOpen = true;
+        }
+        function hide(): void { GlobalState.appsOpen = false; }
+        function refresh(): void { MiniApps.refresh(); }
+        // By exact .desktop id, as the launcher would. "ok" or "missing":
+        // scripts/open-default.sh falls back on anything but ok.
+        function launch(id: string): string {
+            // mimeapps.list says "firefox.desktop"; Quickshell's ids have no
+            // suffix ("firefox"), as Config.dockApps does.
+            const e = DesktopEntries.byId(id) ?? DesktopEntries.byId(id.replace(/\.desktop$/, ""));
+            if (!e)
+                return "missing";
+            e.execute();
+            return "ok";
+        }
+    }
+
+    IpcHandler {
+        target: "record"
+        function toggle(): void { Recorder.toggle("screen", false); }
+        function region(): void { Recorder.toggle("region", false); }
+        function sound(): void { Recorder.toggle("screen", true); }
+        function stop(): void { Recorder.stop(); }
+    }
+
+    IpcHandler {
+        target: "screenshot"
+        function toggle(): void { GlobalState.screenshotOpen = !GlobalState.screenshotOpen; }
+        function region(): void { Shot.capture("region", "copy"); }
+        function window(): void { Shot.capture("window", "copy"); }
+        function screen(): void { Shot.capture("screen", "copy"); }
+        function save(): void { Shot.capture("screen", "save"); }
+        function ocr(): void { Shot.capture("region", "ocr"); }
+        function translate(): void { Shot.capture("region", "translate"); }
+    }
+
+    IpcHandler {
+        target: "brightness"
+        function up(): void { Brightness.up(); }
+        function down(): void { Brightness.down(); }
+    }
+
+    // ── Global shortcuts ──────────────────────────────────────────────
+    // Declared on the Hyprland side with hl.dsp.global("quickshell:<name>").
+    // onReleased opens the launcher on a tap-and-release of SUPER without
+    // interfering with SUPER + other key combinations.
+
+    // Tap-and-release of SUPER alone: opens the launcher.
+    // Hyprland only emits this bind's release if no other key was pressed
+    // in between (checked at evdev injection), so no extra guard is needed.
+    GlobalShortcut {
+        name: "launcherToggle"
+        description: "App launcher (tap and release SUPER)"
+        onReleased: GlobalState.toggleLauncher()
+    }
+
+    GlobalShortcut {
+        name: "clipboardToggle"
+        description: "Clipboard history"
+        onPressed: GlobalState.launchWith(";")
+    }
+
+    GlobalShortcut {
+        name: "gameBarToggle"
+        description: "Game bar"
+        onPressed: {
+            if (Recorder.picking) {
+                Recorder.cancelPick();
+                GlobalState.gameBarOpen = true;
+                return;
+            }
+            GlobalState.gameBarOpen = !GlobalState.gameBarOpen;
+        }
+    }
+
+    GlobalShortcut {
+        name: "sessionToggle"
+        description: "Session menu"
+        onPressed: GlobalState.sessionOpen = !GlobalState.sessionOpen
+    }
+
+    GlobalShortcut {
+        name: "brightnessUp"
+        description: "Brightness up (gamma then backlight)"
+        onPressed: Brightness.up()
+    }
+
+    GlobalShortcut {
+        name: "kbdBrightnessUp"
+        description: "Keyboard backlight up"
+        onPressed: Brightness.kbdUp()
+    }
+
+    GlobalShortcut {
+        name: "kbdBrightnessDown"
+        description: "Keyboard backlight down"
+        onPressed: Brightness.kbdDown()
+    }
+
+    GlobalShortcut {
+        name: "brightnessDown"
+        description: "Brightness down (backlight then gamma)"
+        onPressed: Brightness.down()
+    }
+
+    // ── Capture feedback ──────────────────────────────────────────────
+    Connections {
+        target: Recorder
+        function onFinished(message: string): void {
+            notify.command = ["notify-send", "-a", "Recording", "-i",
+                              "media-record", "Screen recording", message];
+            notify.running = true;
+        }
+    }
+
+    Connections {
+        target: Shot
+        function onFinished(message: string): void {
+            // Lens and translate go through the same region picker as a
+            // screenshot, so they arrive here too. Only the label differs -
+            // for translate, "message" is the translation itself, shown
+            // directly in the notification body rather than a status line.
+            const action = Shot.pendingAction;
+            const app = action === "lens" ? "Lens"
+                : action === "translate" ? "Translate" : "Capture";
+            const icon = action === "lens" ? "image-x-generic"
+                : action === "translate" ? "accessories-dictionary"
+                : "camera-photo-symbolic";
+            const title = action === "lens" ? "Google Lens"
+                : action === "translate" ? "Translated · copied" : "Screenshot";
+            notify.command = ["notify-send", "-a", app, "-i", icon, title, message];
+            notify.running = true;
+        }
+    }
+
+    NProcess { id: notify }
+}

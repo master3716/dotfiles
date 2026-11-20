@@ -1,0 +1,209 @@
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Hyprland
+import Quickshell.Wayland
+import Quickshell.Services.Notifications
+import ".."
+import "../components"
+import "../services"
+
+// Notification bubbles. The server lives in services/Notifs.qml so
+// history survives this window closing.
+PanelWindow {
+    id: win
+    required property var modelData
+
+    screen: modelData
+
+    // Shown only on the focused monitor.
+    readonly property bool onFocusedMonitor:
+        (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "")
+    color: "transparent"
+    visible: Config.notificationsEnabled && Notifs.popups.length > 0 && onFocusedMonitor
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.namespace: "nothing-notifications"
+
+    anchors { top: true; right: true }
+    implicitWidth: Theme.px(330)
+    implicitHeight: Math.min(screen.height * 0.8,
+                             win.dropY + stack.implicitHeight + Theme.px(14))
+    exclusionMode: ExclusionMode.Ignore
+
+    // Bubbles hang under the bar, not over it, at the same offset the
+    // control centre and the flyouts use. They started fourteen pixels
+    // from the top, which is inside the bar: this window is on the
+    // overlay layer, so its mask covered the right island and the bell
+    // underneath it stopped taking clicks whenever a popup was alive.
+    readonly property int dropY: Theme.px(5) + Theme.z.bar + Theme.px(8)
+
+    mask: Region { item: stack }
+
+    // A Column and not a ColumnLayout, for its move transition: dismissing
+    // a bubble made every bubble under it jump up between two frames.
+    // ColumnLayout has no such transition.
+    //
+    // A Column leaves its children's width alone, so each one has to be
+    // told. That is what `width: stack.width` below is for, and it is why
+    // this positioner is named: it was written as ColumnLayout with the
+    // delegate already reading stack.width, and the name resolved to
+    // nothing at all. The bubbles came out zero pixels wide, so every
+    // notification since was invisible while still masking the bar.
+    Column {
+        id: stack
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: win.dropY
+        anchors.rightMargin: Theme.px(10)
+        width: Theme.px(300)
+        spacing: Theme.px(8)
+
+        move: Transition {
+            NumberAnimation {
+                properties: "y"
+                duration: Theme.med
+                easing.type: Theme.ease
+            }
+        }
+
+        Repeater {
+            model: Notifs.popups
+
+            NCard {
+                id: bubble
+                required property var modelData
+
+                width: stack.width
+                implicitHeight: body.implicitHeight + Theme.px(22)
+                height: implicitHeight
+                radius: Theme.r.chip
+                clip: true
+
+                Rectangle {
+                    anchors.left: parent.left
+                    anchors.top: parent.top
+                    anchors.bottom: parent.bottom
+                    width: Theme.px(2)
+                    color: Theme.c.red
+                    visible: bubble.modelData.urgency === NotificationUrgency.Critical
+                }
+
+                opacity: 0
+                x: Theme.px(28)
+                Component.onCompleted: {
+                    opacity = 1;
+                    x = 0;
+                    if (Theme.manga)
+                        impact.restart();
+                }
+                Behavior on opacity { NumberAnimation { duration: Theme.med } }
+                Behavior on x { NumberAnimation { duration: Theme.med; easing.type: Theme.ease } }
+
+                // The manga impact moment: the burst flashes in with the
+                // bubble and is gone within a beat, not a static corner
+                // decoration on something this short-lived.
+                MangaBurst {
+                    id: burst
+                    visible: Theme.manga
+                    opacity: 0
+                    anchors.fill: parent
+                    origin: Qt.point(width, height / 2)
+                    lineColor: Theme.c.red
+                    lineCount: 18
+                    thickness: 2
+                    startDeg: 180
+                    spreadDeg: 150
+                }
+                SequentialAnimation {
+                    id: impact
+                    NumberAnimation { target: burst; property: "opacity"; to: 0.8; duration: 60 }
+                    NumberAnimation { target: burst; property: "opacity"; to: 0; duration: 420; easing.type: Easing.OutQuad }
+                }
+
+                Timer {
+                    running: bubble.modelData.urgency !== NotificationUrgency.Critical
+                    interval: Config.notificationTimeout * 1000
+                    onTriggered: Notifs.dismissPopup(bubble.modelData.key)
+                }
+
+                ColumnLayout {
+                    id: body
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.leftMargin: Theme.px(13)
+                    anchors.rightMargin: Theme.px(9)
+                    spacing: Theme.px(3)
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.px(8)
+
+                        AppIcon {
+                            size: Theme.px(14)
+                            appId: bubble.modelData.desktopEntry
+                            iconName: bubble.modelData.appIcon
+                        }
+
+                        NLabel {
+                            Layout.fillWidth: true
+                            text: bubble.modelData.appName
+                            elide: Text.ElideRight
+                        }
+
+                        CircleButton {
+                            icon: "󰅖"
+                            size: Theme.px(18)
+                            onActivated: Notifs.dismissPopup(bubble.modelData.key)
+                        }
+                    }
+
+                    NText {
+                        Layout.fillWidth: true
+                        text: bubble.modelData.summary
+                        visible: text !== ""
+                        font.pixelSize: Theme.f.body
+                        font.weight: Font.Medium
+                        elide: Text.ElideRight
+                    }
+
+                    NText {
+                        Layout.fillWidth: true
+                        text: bubble.modelData.body
+                        visible: text !== ""
+                        color: Theme.c.onDim
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 3
+                        elide: Text.ElideRight
+                        textFormat: Text.PlainText
+                    }
+
+                    NotifActions {
+                        Layout.topMargin: Theme.px(5)
+                        entry: bubble.modelData
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+                    z: -1
+                    cursorShape: Notifs.canOpen(bubble.modelData)
+                        ? Qt.PointingHandCursor : Qt.ArrowCursor
+                    onClicked: (m) => {
+                        if (m.button === Qt.RightButton) {
+                            GlobalState.notifCenterOpen = true;
+                            Notifs.dismissPopup(bubble.modelData.key);
+                            return;
+                        }
+                        if (m.button === Qt.LeftButton && Notifs.canOpen(bubble.modelData)) {
+                            Notifs.activate(bubble.modelData);
+                            return;
+                        }
+                        Notifs.dismissPopup(bubble.modelData.key);
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Water",
+  "icon": "󰆫",
+  "size": "s",
+  "face": "tracker",
+  "title": "WATER",
+  "prompt": "track how many cups of water I drink against a daily goal of 8",
+  "sources": [],
+  "state": { "n": 0, "goal": 8 },
+  "slots": {
+    "value": "state.n",
+    "unit": "'/' + state.goal",
+    "caption": "'CUPS'",
+    "progress": "state.goal > 0 ? state.n / state.goal : 0"
+  },
+  "plus": "+",
+  "minus": "−",
+  "actions": {
+    "plus": [ { "inc": "n", "by": "1" } ],
+    "minus": [ { "if": "state.n > 0", "do": [ { "inc": "n", "by": "-1" } ] } ]
+  },
+  "tick": []
+}

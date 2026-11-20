@@ -1,0 +1,480 @@
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Io
+import ".."
+import "../components"
+import "../services"
+
+SettingsPage {
+    id: page
+
+    onCurrentChanged: if (current) { Walls.refresh(); Spicetify.refresh(); Vesktop.refresh(); }
+    // Also on creation: whether Spotify or Vesktop is themed is not
+    // something the panel can guess, and a page that opens straight onto
+    // index 0 never sees its own currentChanged.
+    Component.onCompleted: { Spicetify.refresh(); Vesktop.refresh(); }
+
+    NProcess { id: sh; function run(cmd) { command = ["sh", "-c", cmd]; running = true; } }
+
+    SettingsSection {
+        title: "Theme"
+
+        SettingRow {
+            key: "theme"
+            label: "Dark, light or manga"
+            hint: "Dark is the Nothing signature. Light keeps the same layout on white. "
+                + "Manga is a third one: pure ink on paper, a drawn gutter on every panel."
+        }
+
+        DotPicker {
+            options: [
+                { label: "Dark",  value: "dark" },
+                { label: "Light", value: "light" },
+                { label: "Manga", value: "manga" }
+            ]
+            current: Config.theme
+            onPicked: (v) => { Config.theme = v; Config.save(); }
+        }
+    }
+
+    SettingsSection {
+        title: "Scale"
+
+        SettingRow {
+            key: "scale"
+            label: "Interface size"
+            hint: "The whole shell follows this"
+
+            DotSlider {
+                implicitWidth: Theme.px(190)
+                value: (Config.scale - 0.6) / 0.8      // 60 % to 140 %
+                display: Math.round(Config.scale * 100) + " %"
+                onMoved: (v) => {
+                    Config.scale = Math.round((0.6 + v * 0.8) * 20) / 20;
+                    Config.save();
+                }
+            }
+        }
+
+        DotPicker {
+            options: [
+                { label: "Compact", value: 0.85 },
+                { label: "Normal",  value: 1.0 },
+                { label: "Comfort", value: 1.15 },
+                { label: "Large",   value: 1.3 }
+            ]
+            current: Config.scale
+            onPicked: (v) => { Config.scale = v; Config.save(); }
+        }
+    }
+
+    SettingsSection {
+        title: "Accent"
+
+        SettingRow {
+            key: "accent"
+            label: "Colour"
+            hint: Config.accent.toUpperCase()
+
+            Row {
+                spacing: Theme.px(8)
+
+                Repeater {
+                    // The last three are sampled straight off Nothing's own
+                    // product photography (Phone (4a) in Blue and Pink,
+                    // Headphone (a) in Yellow - Nothing has never shipped a
+                    // yellow phone) rather than picked to taste: flat,
+                    // low-variance patches of the body panel in each shot,
+                    // averaged. Nothing publishes no hex spec for these, so
+                    // this is the closest a photo gets you to the real one.
+                    model: ["#d71921", "#ffffff", "#ff6b00", "#00d68f", "#3b82f6", "#a855f7",
+                            "#ddcdcd", "#5b93b0", "#f0d327"]
+
+                    Rectangle {
+                        id: sw
+                        required property string modelData
+                        readonly property bool active:
+                            Config.accent.toLowerCase() === modelData
+
+                        width: Theme.px(20); height: width; radius: width / 2
+                        color: modelData
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        // Detached selection ring, like the halo of a lit
+                        // dot.
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: parent.width + Theme.px(8)
+                            height: width
+                            radius: width / 2
+                            color: "transparent"
+                            border.width: sw.active ? 1 : 0
+                            border.color: Theme.c.on
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -Theme.px(3)
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: { Config.accent = sw.modelData; Config.save(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    SettingsSection {
+        title: "Wallpaper"
+
+        DotPreview {
+            caption: Config.drawWallpaper ? "shown" : "hidden by the shell"
+            implicitHeight: Theme.px(130)
+
+            Image {
+                anchors.fill: parent
+                anchors.margins: Theme.px(10)
+                source: Wallpapers.wallpaperUrl
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                opacity: Config.drawWallpaper ? 1 : 0.25
+                Behavior on opacity { NumberAnimation { duration: Theme.med } }
+            }
+        }
+
+        SettingRow {
+            key: "wallpaperDraw"
+            label: "Drawn by the shell"
+            hint: "Avoids installing swww or hyprpaper"
+            DotSwitch {
+                checked: Config.drawWallpaper
+                onToggled: (v) => { Config.drawWallpaper = v; Config.save(); }
+            }
+        }
+
+        SettingRow {
+            key: "wallpaperSet"
+            label: "Nothing defaults"
+            hint: "The four shipped in hypr/wallpapers"
+            NPillButton {
+                text: Wallpapers.dotWallpaperOn ? "In use" : "Use"
+                opacity: Wallpapers.dotWallpaperOn ? 0.45 : 1
+                onActivated: {
+                    if (Wallpapers.dotWallpaperOn)
+                        return;
+                    // Every screen, per-screen choices dropped, as the
+                    // picker's "All screens" does.
+                    Wallpapers.set(Wallpapers.dotWallpaperKey, "");
+                }
+            }
+        }
+
+        SettingRow {
+            key: "wallpaperChar"
+            label: "Which one"
+            hint: "Dark or light, Nothing or manga"
+            visible: Wallpapers.dotWallpaperOn
+        }
+
+        DotPicker {
+            visible: Wallpapers.dotWallpaperOn
+            options: Wallpapers.dotWallpaperChars
+            current: Config.dotWallpaperChar
+            onPicked: (v) => { Config.dotWallpaperChar = v; Config.save(); }
+        }
+
+        // The file's own picker, not a path typed by hand: zenity opens
+        // the same dialog every other app on the system already uses,
+        // so finding an image means browsing to it rather than knowing
+        // or copying its absolute path first.
+        NProcess {
+            id: filePicker
+            command: ["zenity", "--file-selection", "--title=Choose a wallpaper",
+                      "--file-filter=Images | *.png *.jpg *.jpeg *.webp *.bmp"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const p = text.trim();
+                    // Every screen, like typing it in does.
+                    if (p !== "")
+                        Wallpapers.set(p, "");
+                }
+            }
+        }
+
+        SettingRow {
+            key: "wallpaper"
+            label: "Image"
+            hint: Config.wallpaper !== "" ? Config.wallpaper
+                : "Empty = the image shipped in hypr/"
+
+            RowLayout {
+                spacing: Theme.px(6)
+
+                NField {
+                    implicitWidth: Theme.px(150)
+                    text: Config.wallpaper
+                    placeholder: "hypr/wallpaper.png"
+                    onCommitted: (v) => Wallpapers.set(v.trim(), "")
+                }
+
+                NPillButton {
+                    text: "Browse"
+                    // Settings renders on Wayland's Overlay layer, above
+                    // every ordinary window there is - including the
+                    // picker Zenity is about to open. No window rule
+                    // reaches over that: the layer itself outranks it,
+                    // not its stacking position within one. Closing
+                    // Settings first is what actually lets the dialog
+                    // be seen rather than opened behind it.
+                    onActivated: {
+                        GlobalState.settingsOpen = false;
+                        filePicker.running = true;
+                    }
+                }
+            }
+        }
+
+        SettingRow {
+            key: "wallpaperGlass"
+            label: "Glass effect"
+            hint: Wallpapers.glassBusy ? "Working…"
+                : "Nothing's fluted-glass style, run on a photo you pick"
+            NPillButton {
+                text: "Choose a photo"
+                enabled: !Wallpapers.glassBusy
+                opacity: enabled ? 1 : 0.5
+                onActivated: {
+                    GlobalState.settingsOpen = false;
+                    Wallpapers.glassify("");
+                }
+            }
+        }
+
+        SettingRow {
+            key: "wallpaperPicker"
+            label: "Pictures"
+            hint: "Every screen or one, crop or fit, slideshow: SUPER+SHIFT+T. Next picture: SUPER+ALT+W"
+            NPillButton {
+                text: "Open the picker"
+                onActivated: {
+                    GlobalState.settingsOpen = false;
+                    GlobalState.wallpaperPickerOpen = true;
+                }
+            }
+        }
+
+        NProcess {
+            id: folderPicker
+            command: ["zenity", "--file-selection", "--directory", "--title=Choose the wallpaper folder"]
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    const p = text.trim();
+                    if (p !== "") {
+                        Config.wallpaperFolder = p;
+                        Config.save();
+                    }
+                }
+            }
+        }
+
+        SettingRow {
+            key: "wallpaperFolder"
+            label: "Wallpaper folder"
+            hint: "Shown first in the picker and used by the slideshow; empty = ~/Pictures/Wallpapers"
+
+            RowLayout {
+                spacing: Theme.px(6)
+
+                NField {
+                    implicitWidth: Theme.px(150)
+                    text: Config.wallpaperFolder
+                    placeholder: "~/Pictures/Wallpapers"
+                    onCommitted: (v) => { Config.wallpaperFolder = v.trim(); Config.save(); }
+                }
+
+                NPillButton {
+                    text: "Browse"
+                    // Same reason as the image's Browse: Settings would
+                    // otherwise sit over the dialog.
+                    onActivated: {
+                        GlobalState.settingsOpen = false;
+                        folderPicker.running = true;
+                    }
+                }
+            }
+        }
+
+        GridLayout {
+            Layout.fillWidth: true
+            columns: 4
+            columnSpacing: Theme.px(6)
+            rowSpacing: Theme.px(6)
+            visible: Walls.files.length > 0
+
+            Repeater {
+                // The newest eight; the picker has them all.
+                model: Walls.files.slice(0, 8)
+
+                Item {
+                    id: thumb
+                    required property string modelData
+                    readonly property bool active: Config.wallpaper === modelData
+
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: Theme.px(52)
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Theme.r.tiny
+                        color: Theme.c.surface2
+                        border.width: thumb.active ? 1 : 0
+                        border.color: Theme.c.red
+                        clip: true
+
+                        Image {
+                            anchors.fill: parent
+                            anchors.margins: thumb.active ? 1 : 0
+                            source: "file://" + thumb.modelData
+                            // Decoded at thumbnail size, not the photo's own.
+                            sourceSize.width: Theme.px(200)
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: Wallpapers.set(thumb.modelData, "")
+                        }
+                    }
+                }
+            }
+        }
+
+        SettingRow {
+            label: "Regenerate the shipped image"
+            hint: "Runs the Python script at screen resolution"
+            NPillButton {
+                text: "Generate"
+                onActivated: {
+                    const s = page.Window.window?.screen;
+                    const w = Math.round((s?.width ?? 1920) * 1.5);
+                    const h = Math.round((s?.height ?? 1080) * 1.5);
+                    sh.run(`cd "$HOME/hypr_nothing" && python3 scripts/gen-wallpaper.py ${w} ${h}`);
+                }
+            }
+        }
+    }
+
+    // ── Spotify ───────────────────────────────────────────────────────
+    // One row, because there is one decision. Everything the theme needs
+    // to know (which accent, dark or light) it reads from the settings
+    // above rather than asking again here.
+    SettingsSection {
+        title: "Spotify"
+
+        SettingRow {
+            key: "spotifyTheme"
+            label: "Nothing theme for Spotify"
+            hint: {
+                switch (Spicetify.state) {
+                case "unknown":     return "Looking…";
+                case "noSpotify":   return "Spotify is not installed on this machine";
+                case "noSpicetify": return "Needs spicetify-cli, from the AUR - the patcher "
+                                         + "every Spotify theme goes through. Install opens "
+                                         + "your terminal so you can read the build and "
+                                         + "answer its prompts.";
+                case "locked":      return "Spotify is patched in place, so "
+                                         + Spicetify.dir + " has to be made writable "
+                                         + "once. You will be asked for your password.";
+                case "stale":       return Spicetify.scheme !== Spicetify.wantScheme
+                                         ? "Applied in " + Spicetify.scheme
+                                           + ". The shell is set to " + Spicetify.wantScheme + "."
+                                         : "Applied with #" + Spicetify.accent
+                                           + ". Your accent is now #" + Spicetify.wantAccent + ".";
+                case "on":          return "Applied. Close and reopen Spotify to see it.";
+                default:            return "Matte black, no green anywhere, and the "
+                                         + "play button in your accent";
+                }
+            }
+
+            NPillButton {
+                visible: Spicetify.state !== "noSpotify"
+                    && Spicetify.state !== "unknown"
+                text: {
+                    if (Spicetify.busy) return "Working…";
+                    switch (Spicetify.state) {
+                    case "noSpicetify": return "Install";
+                    case "stale":       return "Update";
+                    case "on":          return "Remove";
+                    default:            return "Apply";
+                    }
+                }
+                danger: Spicetify.state === "on"
+                onActivated: {
+                    if (Spicetify.busy) return;
+                    if (Spicetify.state === "noSpicetify") Spicetify.installSpicetify();
+                    else if (Spicetify.state === "on") Spicetify.revert();
+                    else Spicetify.apply();
+                }
+            }
+        }
+
+        // Only ever drawn when something went wrong, and it carries
+        // spicetify's own last line rather than a sentence of ours: the
+        // reason it refused is the only useful thing on this row.
+        SettingRow {
+            visible: Spicetify.error !== ""
+            label: "It did not go through"
+            hint: Spicetify.error
+            NIcon { text: "󰀦"; size: Theme.z.icon; color: Theme.c.red }
+        }
+    }
+
+    // ── Vesktop ───────────────────────────────────────────────────────
+    // No accent to fall out of sync with and no root needed to write into
+    // ~/.config, so this is the whole state: on, off, or not installed.
+    SettingsSection {
+        title: "Vesktop"
+
+        SettingRow {
+            key: "vesktopTheme"
+            label: "Nothing theme for Vesktop"
+            hint: {
+                switch (Vesktop.state) {
+                case "unknown":   return "Looking…";
+                case "noVesktop": return "Vesktop is not installed on this machine";
+                case "on":        return "Applied. Restart Vesktop to see it.";
+                default:          return "Matte black, one red, and the dot-matrix "
+                                       + "face from the rest of this desktop";
+                }
+            }
+
+            NPillButton {
+                visible: Vesktop.state !== "noVesktop"
+                    && Vesktop.state !== "unknown"
+                text: {
+                    if (Vesktop.busy) return "Working…";
+                    switch (Vesktop.state) {
+                    case "on": return "Remove";
+                    default:   return "Install";
+                    }
+                }
+                danger: Vesktop.state === "on"
+                onActivated: {
+                    if (Vesktop.busy) return;
+                    if (Vesktop.state === "on") Vesktop.revert();
+                    else Vesktop.apply();
+                }
+            }
+        }
+
+        SettingRow {
+            visible: Vesktop.error !== ""
+            label: "It did not go through"
+            hint: Vesktop.error
+            NIcon { text: "󰀦"; size: Theme.z.icon; color: Theme.c.red }
+        }
+    }
+}

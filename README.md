@@ -81,16 +81,32 @@ exec zsh
 ```
 .
 ├── install.sh                  # Complete automated installation script
+├── revert-nought.sh            # One-click revert script for Nought rice & theme
 ├── README.md                   # Documentation
 ├── .gitignore
 ├── .gitattributes
+├── bin/
+│   ├── dbfetch                 # Dragon Ball interactive terminal fetch
+│   ├── neofetch                # Neofetch system info tool
+│   └── steam                   # Custom steam launcher script
+├── applications/               # Desktop application entries (Nothing X, etc.)
+├── assets/                     # Rice wallpapers, logos, and UI assets
+├── icons/                      # Custom app icons and SVG vectors
+├── docs/                       # Rice internals and licenses
 ├── zsh/
 │   ├── .zshrc                 # Main Zsh configuration
 │   ├── .zshenv                # Shell environment exports
 │   └── .p10k.zsh              # Powerlevel10k theme configuration
 └── config/
+    ├── fastfetch/             # Fastfetch Nothing dot-matrix configuration
+    ├── fish/                  # Fish shell Nothing integration
+    ├── fontconfig/            # Fontconfig Inter / Ndot typography
     ├── ghostty/
     │   └── config             # Ghostty Tokyo Night modern configuration
+    ├── gtk-3.0/               # GTK 3 Nothing matte black + red theme
+    ├── gtk-4.0/               # GTK 4 Nothing matte black + red theme
+    ├── hypr/                  # Hyprland Lua configuration & keybinds
+    ├── kitty/                 # Kitty terminal Nothing theme
     ├── nvim/                  # Neovim (LazyVim) configuration
     │   ├── init.lua
     │   ├── lazyvim.json
@@ -99,9 +115,68 @@ exec zsh
     │   └── lua/
     │       ├── config/        # Autocmds, keymaps, lazy setup, options
     │       └── plugins/       # Custom language LSPs & toggleterm
+    ├── quickshell/            # Quickshell Nothing OS desktop & widget UI
+    ├── scripts/               # Desktop helper scripts (lock, screenshot, etc.)
+    ├── starship.toml          # Starship Nothing prompt configuration
+    ├── theme/                 # GTK, KDE, Icon, Spicetify, Vesktop & Zen themes
     └── zellij/
         └── config.kdl         # Zellij custom layout & keybind configuration
 ```
+
+---
+
+## 🔴 Nought (Nothing OS) Desktop Rice & Theme
+
+Integrated rice based on [Nought](https://github.com/0xbbuddha/Nought) — recreating the Nothing OS aesthetic on Linux: matte black ground (`#0b0b0b`), Nothing red accent (`#d71921`), tight radii, and dot-matrix glyphs.
+
+### Conflict Resolution Policy
+* **Theme of the OS**: Sticks with Nought's design language across the whole system:
+  * **GTK 3 & GTK 4**: Matte black ground, red accent, squircle widgets.
+  * **Qt / KDE**: `Nothing.colors` color scheme and `darklyrc` styling for Dolphin, Kate, etc.
+  * **Icon Theme**: `Nothing` dot-matrix icon theme.
+  * **GNOME Interface**: Dark preference (`prefer-dark`), `Adwaita-dark`, `Inter Variable 10` typography.
+  * **Fonts**: Inter Variable for system UI, JetBrains Mono / Meslo for monospace.
+* **Personal Development & Tooling**: Preserves user's preferred configs over repository defaults:
+  * **Shell**: User's Zsh + Oh My Zsh + Powerlevel10k + `dbfetch` remains default.
+  * **Terminal**: User's Ghostty configuration remains default.
+  * **Editor**: User's Neovim (LazyVim) configuration is untouched.
+  * **Multiplexer**: User's Zellij configuration is untouched.
+
+### Deploying Nought
+To deploy the Nothing OS desktop rice, themes, and configuration files:
+```bash
+./install.sh --nought
+```
+Or to run full setup and deploy Nought simultaneously:
+```bash
+./install.sh --all
+```
+
+### ↺ Reverting Nought (100% Revertable)
+If you decide you do not want Nought, everything can be cleanly and safely reverted:
+
+1. **Reverting system settings and installed configs**:
+   Run the dedicated revert script at any time:
+   ```bash
+   ./revert-nought.sh
+   # Or alternatively:
+   ./install.sh --revert-nought
+   ```
+   This will:
+   * Restore previous GNOME desktop interface settings (GTK theme, icon theme, font, color scheme).
+   * Restore previous GTK 3, GTK 4, and Qt/KDE settings.
+   * Remove Nothing icon themes and application entries.
+   * Remove Nought Hyprland, Quickshell, scripts, and theme links from `~/.config`.
+   * Re-apply user's GNOME dconf settings (`dash-to-panel`, etc.).
+
+2. **Reverting the Git repository**:
+   The Nought integration lives on the dedicated `nought` git branch, with the previous state preserved at tag `backup-before-nought`.
+   To revert the repository back to before Nought was added:
+   ```bash
+   git checkout main
+   # (Or: git checkout backup-before-nought)
+   ```
+
 
 ---
 

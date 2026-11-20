@@ -1,0 +1,20 @@
+{
+  "name": "Rates",
+  "icon": "󰄔",
+  "size": "s",
+  "face": "note",
+  "title": "EUR",
+  "prompt": "what one euro is worth in dollars, pounds and yen",
+  "sources": ["net"],
+  "state": {},
+  "slots": {
+    "note": "data ? ('USD ' + fmt.round(data.USD, 3) + '\\nGBP ' + fmt.round(data.GBP, 3) + '\\nJPY ' + fmt.round(data.JPY, 0)) : 'LOADING'"
+  },
+  "fetch": {
+    "url": "https://api.frankfurter.app/latest?from=EUR&to=USD,GBP,JPY",
+    "pick": "rates",
+    "every": 10800
+  },
+  "actions": {},
+  "tick": []
+}

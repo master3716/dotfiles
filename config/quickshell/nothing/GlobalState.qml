@@ -1,0 +1,133 @@
+pragma Singleton
+
+import QtQuick
+import Quickshell
+
+// Shared state between shell windows (each is a distinct Wayland
+// window; they cannot reference each other directly).
+Singleton {
+    property bool settingsOpen: false
+
+    // Key of the setting to highlight in the panel, set by search. A row
+    // cannot be targeted otherwise: pages are logical windows distinct
+    // from the search field.
+    property string settingsFocus: ""
+    // Page index paired with settingsFocus when Essential Search jumps
+    // straight into a row. -1 means the panel opened on its own.
+    property int settingsPage: -1
+    // Capture id to open in Essential Space from Essential Search.
+    property string essentialFocus: ""
+
+    property bool controlCenterOpen: false
+    property bool launcherOpen: false
+
+    // Pre-filled query when the launcher opens: used by shortcuts that
+    // jump straight into a mode (clipboard, emoji, calculator...).
+    property string launcherQuery: ""
+
+    // Opens the launcher on a prefix, or closes it if already there.
+    function launchWith(query: string): void {
+        if (launcherOpen && launcherQuery === query) {
+            launcherOpen = false;
+            return;
+        }
+        launcherQuery = query;
+        launcherOpen = true;
+    }
+    property bool sessionOpen: false
+    property bool notifCenterOpen: false
+    property bool screenshotOpen: false
+    property bool gameBarOpen: false
+    property string gameSelected: ""
+    property bool cheatsheetOpen: false
+    property bool essentialOpen: false
+    // Essential Apps panel, and the app it should land on.
+    property bool appsOpen: false
+    property string appsFocus: ""
+    property bool essentialPulse: false
+    property string essentialFlyPath: ""
+    property string essentialFlyScreen: ""
+    property bool essentialCatching: false
+    property bool polkitOpen: false
+
+    // The screens and how they are arranged: SUPER+P.
+    property bool displaysOpen: false
+    // Which half of it: "layout" (arrangement, modes) or "light"
+    // (monitor brightness, night light, software dim).
+    property string displaysTab: "layout"
+    // The idle clock (modules/Screensaver), raised by hypridle.
+    property bool screensaverOn: false
+
+    // The Nothing Launcher: widgets and glyph surfaces in one place.
+    property bool launcherNothingOpen: false
+
+    // Which dot-matrix figure to draw, full-bleed previews, no trip
+    // through Settings: SUPER+SHIFT+T.
+    property bool wallpaperPickerOpen: false
+
+    // Right-click the desktop: both widget columns show their remove
+    // buttons without a hover and let their tiles be dragged to reorder.
+    property bool desktopEditOpen: false
+
+    property string netPanel: ""
+    property bool audioPanel: false
+    property bool lightPanel: false
+
+    // Where the flyout that is about to open should sit, in the bar
+    // window's own coordinate space. The bar is a reorderable row now -
+    // the element that opens one of these can be in any of the three
+    // islands - so a fixed screen edge cannot be right for all of them
+    // the way it was back when volume, for instance, always lived on the
+    // right. The caller hands over its own position; the flyout reads it
+    // back instead of anchoring to a corner.
+    property real popupX: 0
+
+    function openNet(kind: string, anchorX: real): void {
+        controlCenterOpen = false;
+        audioPanel = false;
+        lightPanel = false;
+        popupX = anchorX;
+        netPanel = (netPanel === kind) ? "" : kind;
+    }
+
+    function openAudio(anchorX: real): void {
+        controlCenterOpen = false;
+        netPanel = "";
+        lightPanel = false;
+        popupX = anchorX;
+        audioPanel = !audioPanel;
+    }
+
+    function openLight(anchorX: real): void {
+        controlCenterOpen = false;
+        netPanel = "";
+        audioPanel = false;
+        popupX = anchorX;
+        lightPanel = !lightPanel;
+    }
+
+    function toggleSettings(): void { settingsOpen = !settingsOpen; }
+    function toggleLauncher(): void {
+        launcherQuery = "";
+        launcherOpen = !launcherOpen;
+    }
+
+    function closeAll(): void {
+        launcherNothingOpen = false;
+        settingsOpen = false;
+        launcherOpen = false;
+        sessionOpen = false;
+        notifCenterOpen = false;
+        screenshotOpen = false;
+        gameSelected = "";
+        cheatsheetOpen = false;
+        essentialOpen = false;
+        appsOpen = false;
+        displaysOpen = false;
+        netPanel = "";
+        audioPanel = false;
+        lightPanel = false;
+        wallpaperPickerOpen = false;
+        desktopEditOpen = false;
+    }
+}

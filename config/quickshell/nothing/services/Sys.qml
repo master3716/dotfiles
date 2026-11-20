@@ -1,0 +1,334 @@
+pragma Singleton
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import ".."
+
+// CPU / RAM / GPU / temperatures, read directly from /proc and /sys.
+Singleton {
+    id: root
+
+    property real cpu: 0        // 0..1
+    property real ram: 0        // 0..1
+    property real gpu: 0        // 0..1
+    property int  cpuTemp: 0    // °C
+    property int  gpuTemp: 0    // °C
+    property bool gpuSeen: false
+    property string kernel: ""
+
+    // Per core, 0..1 each. A snapshot, not a history: the aggregate
+    // already carries the trend, and forty samples times a dozen cores
+    // is a lot of array to keep for a row that only ever shows "now".
+    property var cpuCores: []
+
+    // Read once alongside distro/kernel below - a CPU or GPU does not
+    // change model mid-session.
+    property string cpuModel: ""
+    property string gpuModel: ""
+
+    // Which distribution this is, from os-release. Its ID_LIKE matters as
+    // much as its name: EndeavourOS is Arch underneath, and the mark worth
+    // showing is the one the system actually descends from.
+    property string distro: ""
+    property string distroId: ""
+    property string distroLike: ""
+    property string host: ""
+
+    // Seconds since boot at the moment it was read, plus when that was, so
+    // the figure stays live without a process polling for it.
+    property real bootUptime: 0
+    property real bootReadAt: 0
+
+    readonly property real uptime: {
+        void Time.now;
+        return root.bootUptime > 0
+            ? root.bootUptime + (Date.now() / 1000 - root.bootReadAt) : 0;
+    }
+
+    function prettyUptime(): string {
+        const s = Math.max(0, Math.floor(root.uptime));
+        const d = Math.floor(s / 86400);
+        const h = Math.floor((s % 86400) / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        if (d > 0) return d + "d " + h + "h";
+        if (h > 0) return h + "h " + m + "m";
+        return m + "m";
+    }
+
+    readonly property string distroMark: {
+        const all = (root.distroId + " " + root.distroLike).toLowerCase();
+        return all.indexOf("arch") >= 0 ? "archLinux" : "";
+    }
+
+    // Memory in KiB, like /proc/meminfo. The recap shows used/free/total.
+    property real ramTotalKb: 1
+    property real ramFreeKb: 0
+    readonly property real ramUsedKb: Math.max(0, ramTotalKb - ramFreeKb)
+
+    property real zramTotalKb: 0
+    property real zramUsedKb: 0
+    property real diskSwapTotalKb: 0
+    property real diskSwapUsedKb: 0
+
+    // The root filesystem, not every mount: a figure meant to answer
+    // "am I running out of space" cares about the one disk everything
+    // actually lands on by default, not a list of every mount point.
+    property real diskTotalKb: 0
+    property real diskUsedKb: 0
+    readonly property real disk: diskTotalKb > 0 ? diskUsedKb / diskTotalKb : 0
+    readonly property real diskFreeKb: Math.max(0, diskTotalKb - diskUsedKb)
+    readonly property string diskDetail: root.detailLine(diskUsedKb, diskFreeKb, diskTotalKb)
+
+    readonly property bool hasZram: zramTotalKb > 0
+    readonly property bool hasDiskSwap: diskSwapTotalKb > 0
+    readonly property real zram: zramTotalKb > 0 ? zramUsedKb / zramTotalKb : 0
+    readonly property real diskSwap: diskSwapTotalKb > 0 ? diskSwapUsedKb / diskSwapTotalKb : 0
+    readonly property real zramFreeKb: Math.max(0, zramTotalKb - zramUsedKb)
+    readonly property real diskSwapFreeKb: Math.max(0, diskSwapTotalKb - diskSwapUsedKb)
+
+    readonly property string ramDetail: root.detailLine(ramUsedKb, ramFreeKb, ramTotalKb)
+    readonly property string zramDetail: root.detailLine(zramUsedKb, zramFreeKb, zramTotalKb)
+    readonly property string swapDetail: root.detailLine(diskSwapUsedKb, diskSwapFreeKb, diskSwapTotalKb)
+
+    // Alert thresholds: beyond these, the UI turns red.
+    // Recent history, so the gauges can show a trend and not just an
+    // instant. Sampled with the poll below, so 40 slots is a little over
+    // a minute: long enough to see a build spike come and go, short
+    // enough that the row stays narrow.
+    readonly property int historyLength: 40
+    property var cpuHistory: []
+    property var ramHistory: []
+    property var gpuHistory: []
+    property var zramHistory: []
+    property var swapHistory: []
+
+    function pushed(list: var, v: real): var {
+        const a = (list ?? []).slice();
+        a.push(Math.max(0, Math.min(1, v)));
+        while (a.length > root.historyLength)
+            a.shift();
+        return a;
+    }
+
+    readonly property bool hot: cpuTemp >= 80 || gpuTemp >= 85
+    readonly property bool busy: cpu > 0.85 || ram > 0.9
+
+    function fmtGb(kb: real): string {
+        return (kb / (1024 * 1024)).toFixed(1) + " GB";
+    }
+
+    function detailLine(usedKb: real, freeKb: real, totalKb: real): string {
+        return root.fmtGb(usedKb) + " used  ·  " + root.fmtGb(freeKb)
+            + " free  ·  " + root.fmtGb(totalKb);
+    }
+
+    property int _prevTotal: 0
+    property int _prevIdle: 0
+    property var _prevCore: ({})
+
+    // Read once. None of it changes while the session runs, so polling it
+    // beside the CPU would be four processes an hour for nothing.
+    NProcess {
+        running: true
+        command: ["sh", "-c",
+            ". /etc/os-release 2>/dev/null;"
+            + " printf '%s\\n%s\\n%s\\n%s\\n'"
+            + " \"${PRETTY_NAME:-$NAME}\" \"$ID\" \"$ID_LIKE\" \"$(uname -r)\";"
+            + " uname -n; cut -d. -f1 /proc/uptime;"
+            + " grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 | sed 's/^ *//';"
+            + " lspci -mm 2>/dev/null | grep -E 'VGA compatible controller|3D controller'"
+            + " | head -1 | awk -F'\"' '{print $6}'"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const l = text.split("\n");
+                root.distro = (l[0] ?? "").trim();
+                root.distroId = (l[1] ?? "").trim();
+                root.distroLike = (l[2] ?? "").trim();
+                root.kernel = (l[3] ?? "").trim();
+                root.host = (l[4] ?? "").trim();
+                root.bootUptime = parseFloat(l[5] ?? "0") || 0;
+                root.bootReadAt = Date.now() / 1000;
+                root.cpuModel = (l[6] ?? "").trim();
+                root.gpuModel = (l[7] ?? "").trim();
+            }
+        }
+    }
+
+    // Disk usage changes slowly - a download, a build, a Steam install -
+    // so it is read on its own, much slower timer rather than beside
+    // the CPU every two seconds.
+    NProcess {
+        id: diskProbe
+        running: true
+        command: ["sh", "-c",
+            "df -k --output=used,size / | tail -1"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const p = text.trim().split(/\s+/);
+                root.diskUsedKb = Number(p[0]) || 0;
+                root.diskTotalKb = Number(p[1]) || 0;
+            }
+        }
+    }
+
+    Timer {
+        interval: 20000
+        running: true
+        repeat: true
+        onTriggered: diskProbe.running = true
+    }
+
+    // CPU, memory and swap are plain text files read straight off disk -
+    // no reason to fork a shell and a batch of awk calls for them every
+    // 2 seconds. Only the thermal-zone glob and the GPU probe below still
+    // need a shell.
+    FileView {
+        id: statFile
+        path: "/proc/stat"
+        onLoaded: {
+            const cores = [];
+            for (const line of statFile.text().split("\n")) {
+                const p = line.trim().split(/\s+/);
+                const label = p[0] ?? "";
+                if (label !== "cpu" && !/^cpu[0-9]+$/.test(label))
+                    continue;
+                let t = 0;
+                for (let i = 1; i < p.length; i++)
+                    t += parseInt(p[i]) || 0;
+                const idle = (parseInt(p[4]) || 0) + (parseInt(p[5]) || 0);
+                if (label === "cpu") {
+                    const dt = t - root._prevTotal, di = idle - root._prevIdle;
+                    if (root._prevTotal > 0 && dt > 0)
+                        root.cpu = Math.max(0, Math.min(1, 1 - di / dt));
+                    root._prevTotal = t; root._prevIdle = idle;
+                } else {
+                    const prev = root._prevCore[label];
+                    if (prev && t - prev.t > 0)
+                        cores.push(Math.max(0, Math.min(1, 1 - (idle - prev.i) / (t - prev.t))));
+                    else
+                        cores.push(0);
+                    root._prevCore[label] = { t: t, i: idle };
+                }
+            }
+            if (cores.length > 0)
+                root.cpuCores = cores;
+        }
+    }
+
+    FileView {
+        id: memFile
+        path: "/proc/meminfo"
+        onLoaded: {
+            let t = 0, a = 0, sawAvail = false;
+            for (const line of memFile.text().split("\n")) {
+                if (line.startsWith("MemTotal:"))
+                    t = parseInt(line.split(/\s+/)[1]) || 0;
+                else if (line.startsWith("MemAvailable:")) {
+                    a = parseInt(line.split(/\s+/)[1]) || 0;
+                    sawAvail = true;
+                }
+            }
+            // A kernel without MemAvailable (pre-3.14) would otherwise
+            // read as 0 available, i.e. 100% RAM used - keep the last
+            // known reading instead of reporting a false spike.
+            if (t > 0 && sawAvail) {
+                root.ramTotalKb = t;
+                root.ramFreeKb = a;
+                root.ram = 1 - a / t;
+            }
+        }
+    }
+
+    FileView {
+        id: swapsFile
+        path: "/proc/swaps"
+        onLoaded: {
+            let zt = 0, zu = 0, dt = 0, du = 0;
+            const lines = swapsFile.text().split("\n").slice(1);
+            for (const line of lines) {
+                const p = line.trim().split(/\s+/);
+                if (p.length < 4 || p[0] === "")
+                    continue;
+                const size = Number(p[2]) || 0, used = Number(p[3]) || 0;
+                if (/zram/.test(p[0])) { zt += size; zu += used; }
+                else { dt += size; du += used; }
+            }
+            root.zramTotalKb = zt;
+            root.zramUsedKb = zu;
+            root.diskSwapTotalKb = dt;
+            root.diskSwapUsedKb = du;
+        }
+    }
+
+    // Sampled once per tick, right before this tick's reads land: a
+    // one-tick lag against the just-reloaded files, invisible on a
+    // history graph, and far simpler than lining up three independent
+    // FileView loads to sample them at exactly the same instant.
+    function sample(): void {
+        root.cpuHistory  = root.pushed(root.cpuHistory,  root.cpu);
+        root.ramHistory  = root.pushed(root.ramHistory,  root.ram);
+        root.gpuHistory  = root.pushed(root.gpuHistory,  root.gpu);
+        root.zramHistory = root.pushed(root.zramHistory, root.zram);
+        root.swapHistory = root.pushed(root.swapHistory, root.diskSwap);
+    }
+
+    Timer {
+        interval: 2000
+        running: true
+        repeat: true
+        onTriggered: {
+            root.sample();
+            statFile.reload();
+            memFile.reload();
+            swapsFile.reload();
+        }
+    }
+
+    // Thermal zones and the GPU still need a shell (globbing, and
+    // nvidia-smi for NVIDIA cards). Temperature and GPU load drift more
+    // slowly than CPU/RAM, so this one can run at a quarter the rate.
+    NProcess {
+        id: tempProbe
+        running: true
+        command: ["sh", "-c", `
+            for f in /sys/class/thermal/thermal_zone*/temp; do [ -r "$f" ] && cat "$f"; done \
+                | sort -rn | head -1 | awk '{printf "CTEMP %d\\n", $1/1000}'
+            if command -v nvidia-smi >/dev/null 2>&1; then
+                nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null \
+                    | head -1 | awk -F'[, ]+' '{print "GPU", $1, $2}'
+            else
+                for d in /sys/class/drm/card*/device; do
+                    if [ -r "$d/gpu_busy_percent" ]; then
+                        b=$(cat "$d/gpu_busy_percent")
+                        t=$(cat "$d"/hwmon/hwmon*/temp1_input 2>/dev/null | head -1)
+                        echo "GPU $b $((\${t:-0} / 1000))"
+                        break
+                    fi
+                done
+            fi
+        `]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                for (const line of text.trim().split("\n")) {
+                    const p = line.trim().split(/\s+/);
+                    switch (p[0]) {
+                    case "CTEMP": root.cpuTemp = parseInt(p[1]) || 0; break;
+                    case "GPU":
+                        root.gpuSeen = true;
+                        root.gpu = (parseInt(p[1]) || 0) / 100;
+                        root.gpuTemp = parseInt(p[2]) || 0;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    Timer {
+        interval: 8000
+        running: true
+        repeat: true
+        onTriggered: tempProbe.running = true
+    }
+}

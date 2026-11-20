@@ -1,0 +1,173 @@
+#!/usr/bin/env bash
+# Screenshot helper for the Nothing shell.
+#   screenshot.sh <region|window|screen|geo|freeze> <copy|save|edit|ocr|lens|translate> [geo] [output] [lang]
+#
+# WARNING: the lens action SENDS the crop to a third-party host
+# (uguu.se) to get a public URL, then opens it in Google Lens. translate
+# OCRs the crop locally (tesseract) then sends the text to whichever AI
+# backend Essential Space is already set to in Settings (Gemini or
+# Ollama) - the same backend Essential Search and Essential Apps already
+# use, nothing new to consent to.
+#
+# freeze: crop the pre-overlay grim in $XDG_RUNTIME_DIR/nothing-snip/<output>.png
+# so the picker veil is not baked into the shot.
+# Writes a short message to stdout, shown as a notification by the shell.
+#
+# Prefer hyprshot when available: it freezes the screen during selection
+# (-z) and can target a whole window, which slurp alone cannot do.
+set -uo pipefail
+
+MODE="${1:-region}"
+ACTION="${2:-copy}"
+GEO="${3:-}"
+OUTPUT="${4:-}"
+TARGET_LANG="${5:-English}"
+DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/Captures"
+FILE="$DIR/$(date +%Y-%m-%d_%H-%M-%S).png"
+SNIP_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/nothing-snip"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+mkdir -p "$DIR"
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+snip_dir() {
+    (umask 077; mkdir -p -- "$SNIP_DIR") || return 1
+    [[ -d "$SNIP_DIR" && ! -L "$SNIP_DIR" && -O "$SNIP_DIR" ]] || return 1
+    chmod 700 -- "$SNIP_DIR"
+}
+
+drop_frames() {
+    local f
+    for f in "$SNIP_DIR"/*.png; do
+        [[ "$f" == "$SNIP_DIR/key.png" ]] || rm -f -- "$f"
+    done
+}
+
+capture() {
+    if [[ "$MODE" == "freeze" ]]; then
+        local src="$SNIP_DIR/${OUTPUT}.png"
+        [[ -n "$GEO" && -n "$OUTPUT" && -s "$src" ]] || return 1
+        python3 "$ROOT/scripts/crop-snip.py" "$src" "$FILE" "$GEO"
+        return
+    fi
+
+    if [[ "$MODE" == "geo" ]]; then
+        [[ -n "$GEO" ]] || return 1
+        grim -g "$GEO" "$FILE"
+        return
+    fi
+
+    if have hyprshot; then
+        local hm
+        case "$MODE" in
+            region) hm="region" ;;
+            window) hm="window" ;;
+            screen) hm="output" ;;
+        esac
+        # --freeze keeps the image still while we select
+        local args=(-m "$hm" -z -s -o "$DIR" -f "$(basename "$FILE")")
+        [[ "$MODE" == "screen" ]] && args=(-m output -m "$(hyprctl -j activeworkspace | jq -r .monitor)" -s -o "$DIR" -f "$(basename "$FILE")")
+        hyprshot "${args[@]}" >/dev/null 2>&1
+        # hyprshot's last line is `begin_grab $OPTION & checkRunning`: the
+        # grab, and so the grim that writes the file, runs in the
+        # background while the foreground returns as soon as slurp
+        # disappears. That is the moment you release the mouse, not the
+        # moment the file exists, so testing for it here lost the race and
+        # the capture came back "Cancelled". Wait for it instead.
+        local i=0
+        while [[ ! -s "$FILE" ]] && (( i < 40 )); do
+            sleep 0.05
+            i=$((i + 1))
+        done
+        [[ -s "$FILE" ]]
+        return
+    fi
+
+    # Fallback without hyprshot: slurp plus grim, no screen freeze.
+    local geo=""
+    case "$MODE" in
+        region) geo="$(slurp -d -b 00000080 -c d71921ff -w 2)" || return 1 ;;
+        window) geo="$(hyprctl -j activewindow | jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"')" ;;
+    esac
+    if [[ -n "$geo" ]]; then grim -g "$geo" "$FILE"; else grim "$FILE"; fi
+}
+
+capture
+captured=$?
+[[ "$MODE" == "freeze" ]] && drop_frames
+(( captured == 0 )) || { echo "Cancelled"; exit 1; }
+
+snip_dir || { echo "Cancelled"; exit 1; }
+printf '%s\n' "$FILE" > "$SNIP_DIR/last"
+
+case "$ACTION" in
+    copy)
+        wl-copy < "$FILE"
+        echo "Copied and saved"
+        ;;
+    save)
+        echo "Saved"
+        ;;
+    edit)
+        if have swappy; then
+            swappy -f "$FILE" >/dev/null 2>&1 &
+            echo "Opened in swappy"
+        else
+            wl-copy < "$FILE"
+            echo "swappy missing, copied instead"
+        fi
+        ;;
+    lens)
+        # Reached through the shell's own region picker, the same one the
+        # other actions use. Spawning slurp instead meant asking for a
+        # pointer grab while the launcher still held one, and it never
+        # got one: no crosshair appeared and the process waited forever.
+        if [[ "$(python3 -I "$ROOT/scripts/essential.py" consent lens)" != "yes" ]]; then
+            rm -f "$FILE"
+            echo "Cancelled"; exit 1
+        fi
+        URL="$(curl -sS --max-time 60 -F "files[]=@$FILE" "https://uguu.se/upload" 2>/dev/null \
+            | jq -r '.files[0].url' 2>/dev/null)"
+        rm -f "$FILE"
+        if [[ -z "$URL" || "$URL" == "null" ]]; then
+            echo "Upload failed"; exit 1
+        fi
+        # xdg-open consults $BROWSER before the desktop association and
+        # takes it on faith. A BROWSER naming a binary that does not
+        # exist makes it fail without a word; cleared, it falls back to
+        # the .desktop association.
+        if [[ -n "${BROWSER:-}" ]] && ! command -v "${BROWSER%% *}" >/dev/null 2>&1; then
+            unset BROWSER
+        fi
+        setsid xdg-open "https://lens.google.com/uploadbyurl?url=$(jq -rn --arg u "$URL" '$u | @uri')" \
+            >/dev/null 2>&1 </dev/null &
+        disown 2>/dev/null || true
+        echo "Opened in Google Lens"
+        ;;
+    ocr)
+        if ! have tesseract; then echo "tesseract is not installed"; exit 1; fi
+        LANGS="eng"
+        tesseract --list-langs 2>/dev/null | grep -qx fra && LANGS="fra+eng"
+        TEXT="$(tesseract "$FILE" - -l "$LANGS" 2>/dev/null)"
+        rm -f "$FILE"
+        if [[ -z "${TEXT// }" ]]; then echo "No text detected"; exit 1; fi
+        printf '%s' "$TEXT" | wl-copy
+        echo "Text copied ($(printf '%s' "$TEXT" | wc -c) characters)"
+        ;;
+    translate)
+        if ! have tesseract; then echo "tesseract is not installed"; exit 1; fi
+        LANGS="eng"
+        tesseract --list-langs 2>/dev/null | grep -qx fra && LANGS="fra+eng"
+        TEXT="$(tesseract "$FILE" - -l "$LANGS" 2>/dev/null)"
+        rm -f "$FILE"
+        if [[ -z "${TEXT// }" ]]; then echo "No text detected"; exit 1; fi
+        if ! TRANSLATED="$(printf '%s' "$TEXT" \
+                | python3 -I "$ROOT/scripts/essential.py" translate "$TARGET_LANG" 2>&1)"; then
+            echo "$TRANSLATED"
+            exit 1
+        fi
+        printf '%s' "$TRANSLATED" | wl-copy
+        echo "$TRANSLATED"
+        ;;
+esac

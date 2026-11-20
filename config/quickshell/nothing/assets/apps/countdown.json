@@ -1,0 +1,16 @@
+{
+  "name": "Countdown",
+  "icon": "󰥔",
+  "size": "m",
+  "face": "stat",
+  "title": "COUNTDOWN",
+  "prompt": "count down to a date I can change, with a label",
+  "sources": ["time"],
+  "state": { "target": "2026-12-25T00:00:00", "label": "CHRISTMAS" },
+  "slots": {
+    "value": "fmt.until(state.target)",
+    "caption": "state.label"
+  },
+  "actions": {},
+  "tick": []
+}

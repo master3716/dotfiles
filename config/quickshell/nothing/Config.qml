@@ -1,0 +1,1489 @@
+pragma Singleton
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import "components"
+import "services"
+
+// Settings persisted in ~/.config/nothing/config.json.
+// Everything editable from the settings panel lives here.
+Singleton {
+    id: root
+
+    readonly property string dir: `${Quickshell.env("HOME")}/.config/nothing`
+    readonly property string path: `${root.dir}/config.json`
+
+    // false until config.json has been read: otherwise adapterUpdated
+    // would write defaults over the user's settings.
+    property bool ready: false
+
+    // ── Appearance ────────────────────────────────────────────────────
+    property alias scale: a.scale
+    property alias theme: a.theme
+    property alias accent: a.accent
+    property alias drawWallpaper: a.drawWallpaper
+    property alias wallpaper: a.wallpaper
+    property alias dotWallpaperChar: a.dotWallpaperChar
+    property alias wallpaperScreenNames: a.wallpaperScreenNames
+    property alias wallpaperScreenValues: a.wallpaperScreenValues
+    property alias wallpaperFolder: a.wallpaperFolder
+    property alias wallpaperRotate: a.wallpaperRotate
+    property alias wallpaperShuffle: a.wallpaperShuffle
+    property alias wallpaperEachScreen: a.wallpaperEachScreen
+    property alias wallpaperFill: a.wallpaperFill
+
+    // ── Shown elements ────────────────────────────────────────────────
+    property alias showDock: a.showDock
+    property alias showDesktopWidgets: a.showDesktopWidgets
+    property alias showTray: a.showTray
+    property alias showBattery: a.showBattery
+    property alias showWorkspaces: a.showWorkspaces
+
+    // What sits in each island of the bar, in order. See BarRegistry.
+    property alias barLeft: a.barLeft
+    property alias barCentre: a.barCentre
+    property alias barRight: a.barRight
+    property alias barShowCpu: a.barShowCpu
+    property alias barShowRam: a.barShowRam
+    property alias barShowGpu: a.barShowGpu
+    property alias barShowTemp: a.barShowTemp
+
+    // Corner radius of the bar's islands, in real screen pixels - not run
+    // through Theme.px, on purpose: the whole point is a value the slider
+    // label and the actual corner agree on at any UI scale, rather than
+    // one that drifts by the time it is drawn. Independent of
+    // Theme.r.panel (the CC, windows and everything else keep sharing
+    // that one); this only ever touches the bar.
+    property alias barRadius: a.barRadius
+
+    // ── Windows ───────────────────────────────────────────────────────
+    // Which layout Hyprland arranges windows with, and the settings of the
+    // scrolling one. Written out to ~/.config/hypr/layout.lua by
+    // services/WindowLayout.qml, the way the display manager writes
+    // displays.lua.
+    property alias windowLayout: a.windowLayout
+    property alias scrollColumnWidth: a.scrollColumnWidth
+    property alias scrollFocusFit: a.scrollFocusFit
+    property alias scrollDirection: a.scrollDirection
+    property alias scrollFullscreenOne: a.scrollFullscreenOne
+    property alias scrollFollowFocus: a.scrollFollowFocus
+    property alias shelfSide: a.shelfSide
+    property alias mainWidth: a.mainWidth
+
+    // ── Control centre ────────────────────────────────────────────────
+    property alias ccTiles: a.ccTiles
+    property alias ccFooter: a.ccFooter
+    property alias ccColumns: a.ccColumns
+    // Which tiles are square rather than the usual rectangle - a set of
+    // ids, not one setting for all of them: each tile is its own.
+    property alias ccSquareIds: a.ccSquareIds
+
+    function ccIsSquare(id: string): bool {
+        return root.ccSquareIds.indexOf(id) >= 0;
+    }
+
+    function ccToggleSquare(id: string): void {
+        const list = root.ccSquareIds.slice();
+        const i = list.indexOf(id);
+        if (i >= 0) list.splice(i, 1);
+        else list.push(id);
+        root.ccSquareIds = list;
+        root.save();
+    }
+    property alias ccCalendar: a.ccCalendar
+    property alias ccMedia: a.ccMedia
+    property alias ccUpdates: a.ccUpdates
+    property alias ccStats: a.ccStats
+    property alias ccCaffeine: a.ccCaffeine
+    property alias ccDrives: a.ccDrives
+    property alias ccPhone: a.ccPhone
+    property alias phoneStart: a.phoneStart
+    property alias drivesAutomount: a.drivesAutomount
+    property alias drivesNotify: a.drivesNotify
+
+    // ── Behaviour ─────────────────────────────────────────────────────
+    property alias notificationsEnabled: a.notificationsEnabled
+    property alias notificationTimeout: a.notificationTimeout
+    property alias osdEnabled: a.osdEnabled
+    property alias essentialEnabled: a.essentialEnabled
+    property alias essentialSide: a.essentialSide
+    property alias essentialSearch: a.essentialSearch
+    property alias mindBackend: a.mindBackend
+    property alias translateLang: a.translateLang
+
+    // ── Weather ───────────────────────────────────────────────────────
+    property alias weatherEnabled: a.weatherEnabled
+    property alias weatherCity: a.weatherCity
+
+    // ── Programs ──────────────────────────────────────────────────────
+    property alias terminal: a.terminal
+    property alias launcher: a.launcher
+    property alias fileManager: a.fileManager
+
+    // ── Dock ──────────────────────────────────────────────────────────
+    property alias dockApps: a.dockApps
+
+    // ── Dock and workspaces ───────────────────────────────────────────
+    property alias dockAutoHide: a.dockAutoHide
+    property alias dockHideDelay: a.dockHideDelay
+    property alias workspaceCount: a.workspaceCount
+    property alias workspaceStyle: a.workspaceStyle
+    property alias workspaceRows: a.workspaceRows
+    property alias workspaceCols: a.workspaceCols
+    property alias workspaceScale: a.workspaceScale
+
+    // ── Light ─────────────────────────────────────────────────────────
+    property alias nightAutomatic: a.nightAutomatic
+    property alias nightFrom: a.nightFrom
+    property alias nightTo: a.nightTo
+    property alias nightTemperature: a.nightTemperature
+    property alias nightOn: a.nightOn
+    property alias nightRestore: a.nightRestore
+    property alias ddcLinked: a.ddcLinked
+    property alias ddcEvening: a.ddcEvening
+    property alias ddcDayLevel: a.ddcDayLevel
+    property alias ddcEveningLevel: a.ddcEveningLevel
+    property alias displayGrace: a.displayGrace
+    property alias autostartApps: a.autostartApps
+    property alias autoBackup: a.autoBackup
+    property alias autostartDelay: a.autostartDelay
+
+    // ── Input ─────────────────────────────────────────────────────────
+    property alias inputSensitivity: a.inputSensitivity
+    property alias inputAccel: a.inputAccel
+    property alias inputNaturalScroll: a.inputNaturalScroll
+    property alias inputFollowMouse: a.inputFollowMouse
+    property alias inputRepeatRate: a.inputRepeatRate
+    property alias inputRepeatDelay: a.inputRepeatDelay
+    property alias inputNumlock: a.inputNumlock
+    property alias touchpadNaturalScroll: a.touchpadNaturalScroll
+    property alias touchpadDisableTyping: a.touchpadDisableTyping
+    property alias touchpadScrollFactor: a.touchpadScrollFactor
+
+    // ── Game mode ─────────────────────────────────────────────────────
+    property alias gameMode: a.gameMode
+    property alias gameNoAnimations: a.gameNoAnimations
+    property alias gameNoBlur: a.gameNoBlur
+    property alias gameNoShadow: a.gameNoShadow
+    property alias gameTearing: a.gameTearing
+    property alias gameInhibitIdle: a.gameInhibitIdle
+    property alias gameHideShell: a.gameHideShell
+    property alias gameUnfocusedFps: a.gameUnfocusedFps
+    property alias gameFpsLimit: a.gameFpsLimit
+
+    property alias crosshair: a.crosshair
+    property alias crosshairStyle: a.crosshairStyle
+    property alias crosshairSize: a.crosshairSize
+    property alias crosshairThickness: a.crosshairThickness
+    property alias crosshairGap: a.crosshairGap
+    property alias crosshairColor: a.crosshairColor
+    property alias crosshairOutline: a.crosshairOutline
+    property alias gameNotes: a.gameNotes
+    property alias gameWidgets: a.gameWidgets
+    property alias gameImage: a.gameImage
+
+    // ── Game bar widgets ──────────────────────────────────────────────
+    function gameWidget(id: string): var {
+        return (a.gameWidgets ?? []).find(w => w.id === id) ?? null;
+    }
+
+    function gameWidgetEnabled(id: string): bool {
+        return root.gameWidget(id) !== null;
+    }
+
+    function addGameWidget(id: string, x: real, y: real, w: real, h: real, monitor: string): void {
+        if (root.gameWidgetEnabled(id)) return;
+        a.gameWidgets = a.gameWidgets.concat([{
+            id: id, x: x, y: y, w: w, h: h,
+            pinned: false, clickthrough: false,
+            monitor: monitor ?? "",
+            opacity: 1
+        }]);
+        root.save();
+    }
+
+    function removeGameWidget(id: string): void {
+        a.gameWidgets = a.gameWidgets.filter(w => w.id !== id);
+        root.save();
+    }
+
+    // Writes one or more properties of a widget. The array is rebuilt:
+    // QML does not detect mutation of a nested object.
+    function updateGameWidget(id: string, changes: var): void {
+        a.gameWidgets = (a.gameWidgets ?? []).map(w =>
+            w.id === id ? Object.assign({}, w, changes) : w);
+        root.save();
+    }
+
+    // ── Desktop widgets ───────────────────────────────────────────────
+    property alias widgets: a.widgets
+
+    // Falls back to the standard picture folder rather than storing that
+    // path: a config written on one machine then read on another with a
+    // different locale would point at a folder that does not exist.
+    readonly property string photoDir: a.photoDir !== ""
+        ? a.photoDir
+        : `${Quickshell.env("HOME")}/Pictures`
+
+    property alias worldClocks: a.worldClocks
+    property alias screenTimeLimit: a.screenTimeLimit
+
+    // ── Essential Apps ────────────────────────────────────────────────
+    property alias deskApps: a.deskApps
+    property alias showDeskApps: a.showDeskApps
+    property alias appsKey: a.appsKey
+
+    // ── Lock screen ───────────────────────────────────────────────────
+    property alias lockBackground: a.lockBackground
+    property alias idleDim: a.idleDim
+    property alias idleLock: a.idleLock
+    property alias idleOff: a.idleOff
+    property alias idleSaver: a.idleSaver
+    property alias idleSuspend: a.idleSuspend
+
+    // ── Glyph Matrix ──────────────────────────────────────────────────
+    property alias glyphEnabled: a.glyphEnabled
+    property alias glyphX: a.glyphX
+    property alias glyphY: a.glyphY
+    property alias glyphSize: a.glyphSize
+    property alias glyphAbove: a.glyphAbove
+    property alias glyphToy: a.glyphToy
+    property alias glyphToys: a.glyphToys
+
+    // The Glyph Bar: its own placement, because it is a different shape
+    // from the Matrix and sharing one position would put a tall strip
+    // where a round disc used to be.
+    property alias glyphBarEnabled: a.glyphBarEnabled
+    property alias glyphBarX: a.glyphBarX
+    property alias glyphBarY: a.glyphBarY
+    property alias glyphBarLength: a.glyphBarLength
+    property alias glyphBarAbove: a.glyphBarAbove
+    // Shared by every event-driven Glyph surface: only one is ever lit, so
+    // which sources you care about is a property of you, not of the shape.
+    // Per surface. Shared at first, on the reasoning that only one Glyph
+    // is on at a time so the settings belong to you rather than the shape.
+    // Two things were wrong with that: switching surface carried over
+    // choices made for a different one, and the channel list cannot be
+    // shared at all, because the Strip has three sectors and the Bar six.
+    //
+    // Composed rhythms stay common: a rhythm addresses zone groups, so it
+    // plays on any of the three.
+    // What you are counting to. One countdown, not a list: the widget
+    // system keys on the id, so a second countdown would be a second
+    // widget, and Nothing's own is one per placed card too.
+    property alias countdownLabel: a.countdownLabel
+    property alias countdownDate: a.countdownDate
+    property alias countdownShape: a.countdownShape
+
+    // The Glyph Strip: the ring of arcs around the camera, Phone (3a).
+    property alias glyphStripEnabled: a.glyphStripEnabled
+    property alias glyphStripX: a.glyphStripX
+    property alias glyphStripY: a.glyphStripY
+    property alias glyphStripSize: a.glyphStripSize
+    property alias glyphStripAbove: a.glyphStripAbove
+
+    property alias glyphCustom: a.glyphCustom
+    property alias glyphAppPatterns: a.glyphAppPatterns
+
+    readonly property var glyphSurfaces: ["matrix", "bar", "strip"]
+
+    // Per-app rhythm overrides: Discord does not have to flash the same
+    // as Spotify. "" means no override - fall back to the surface's
+    // plain notify pattern. One map, not one per surface: only one
+    // surface is ever live at a time (GlyphEvents.live), so a second
+    // dimension nobody can see both halves of at once is pure clutter.
+    function glyphAppPattern(appId: string): string {
+        return a.glyphAppPatterns[appId] ?? "";
+    }
+
+    function setGlyphAppPattern(appId: string, pattern: string): void {
+        const map = Object.assign({}, a.glyphAppPatterns);
+        if (pattern === "")
+            delete map[appId];
+        else
+            map[appId] = pattern;
+        a.glyphAppPatterns = map;
+        root.save();
+    }
+
+    // Only these three sources have a rhythm to choose. The others are not
+    // events with a shape: a level, a state that lasts, a snapshot.
+    readonly property var glyphRhythmSources: ["notify", "battery", "media"]
+
+    // Spelled out rather than reached by name. Building the property name
+    // and indexing the adapter with it read every value as its default:
+    // bracket access does not resolve these. Verbose, and it works.
+    function _list(v: var): var {
+        if (!v || typeof v !== "object" || v.length === undefined)
+            return null;
+        const out = [];
+        for (let i = 0; i < v.length; i++)
+            out.push(v[i]);
+        return out;
+    }
+
+    // wallpaperScreenNames/Values, zipped into the map Wallpapers.qml
+    // actually wants to read. See wallpaperScreenNames's own comment for
+    // why this isn't one JsonAdapter object property.
+    function wallpaperScreenMap(): var {
+        const names = root._list(a.wallpaperScreenNames) ?? [];
+        const values = root._list(a.wallpaperScreenValues) ?? [];
+        const out = {};
+        for (let i = 0; i < names.length; i++)
+            out[names[i]] = values[i];
+        return out;
+    }
+
+    function setWallpaperScreen(name: string, value: string): void {
+        const names = root._list(a.wallpaperScreenNames) ?? [];
+        const values = root._list(a.wallpaperScreenValues) ?? [];
+        const at = names.indexOf(name);
+        if (at >= 0) {
+            values[at] = value;
+        } else {
+            names.push(name);
+            values.push(value);
+        }
+        a.wallpaperScreenNames = names;
+        a.wallpaperScreenValues = values;
+    }
+
+    function clearWallpaperScreens(): void {
+        a.wallpaperScreenNames = [];
+        a.wallpaperScreenValues = [];
+    }
+
+    function glyphEventsOf(surface: string): var {
+        switch (surface) {
+        case "matrix": return root._list(a.glyphEventsMatrix) ?? [];
+        case "strip":  return root._list(a.glyphEventsStrip) ?? [];
+        default:       return root._list(a.glyphEventsBar) ?? [];
+        }
+    }
+
+    function toggleGlyphEvent(surface: string, id: string): void {
+        const list = root.glyphEventsOf(surface);
+        const at = list.indexOf(id);
+        if (at >= 0)
+            list.splice(at, 1);
+        else
+            list.push(id);
+        switch (surface) {
+        case "matrix": a.glyphEventsMatrix = list; break;
+        case "strip":  a.glyphEventsStrip = list; break;
+        default:       a.glyphEventsBar = list; break;
+        }
+        root.save();
+    }
+
+    function glyphQuietOf(surface: string): bool {
+        switch (surface) {
+        case "matrix": return a.glyphQuietMatrix;
+        case "strip":  return a.glyphQuietStrip;
+        default:       return a.glyphQuietBar;
+        }
+    }
+
+    function setGlyphQuiet(surface: string, on: bool): void {
+        switch (surface) {
+        case "matrix": a.glyphQuietMatrix = on; break;
+        case "strip":  a.glyphQuietStrip = on; break;
+        default:       a.glyphQuietBar = on; break;
+        }
+        root.save();
+    }
+
+    function glyphLevelOf(surface: string): int {
+        switch (surface) {
+        case "matrix": return a.glyphLevelMatrix;
+        case "strip":  return a.glyphLevelStrip;
+        default:       return a.glyphLevelBar;
+        }
+    }
+
+    function setGlyphLevel(surface: string, level: int): void {
+        const v = Math.max(0, Math.min(2, level));
+        switch (surface) {
+        case "matrix": a.glyphLevelMatrix = v; break;
+        case "strip":  a.glyphLevelStrip = v; break;
+        default:       a.glyphLevelBar = v; break;
+        }
+        root.save();
+    }
+
+    function glyphChannelsOf(surface: string): var {
+        switch (surface) {
+        case "matrix": return root._list(a.glyphChannelsMatrix) ?? [];
+        case "strip":  return root._list(a.glyphChannelsStrip) ?? [];
+        default:       return root._list(a.glyphChannelsBar) ?? [];
+        }
+    }
+
+    function setGlyphChannel(surface: string, index: int, id: string): void {
+        const list = root.glyphChannelsOf(surface);
+        while (list.length < 6)
+            list.push("off");
+        if (index < 0 || index >= 6)
+            return;
+        list[index] = id;
+        switch (surface) {
+        case "matrix": a.glyphChannelsMatrix = list; break;
+        case "strip":  a.glyphChannelsStrip = list; break;
+        default:       a.glyphChannelsBar = list; break;
+        }
+        root.save();
+    }
+
+    // Validated where it is played, not here: a composed pattern lives in
+    // this file, so asking the built-in library whether it exists would
+    // have thrown every custom rhythm away on the next read.
+    function glyphPattern(surface: string, source: string): string {
+        let p = "";
+        if (surface === "matrix")
+            p = source === "battery" ? a.glyphPatternMatrixBattery
+              : source === "media"   ? a.glyphPatternMatrixMedia
+              :                        a.glyphPatternMatrixNotify;
+        else if (surface === "strip")
+            p = source === "battery" ? a.glyphPatternStripBattery
+              : source === "media"   ? a.glyphPatternStripMedia
+              :                        a.glyphPatternStripNotify;
+        else
+            p = source === "battery" ? a.glyphPatternBarBattery
+              : source === "media"   ? a.glyphPatternBarMedia
+              :                        a.glyphPatternBarNotify;
+        return (typeof p === "string" && p !== "") ? p : "double";
+    }
+
+    function setGlyphPattern(surface: string, source: string,
+                             pattern: string): void {
+        if (surface === "matrix") {
+            if (source === "battery")   a.glyphPatternMatrixBattery = pattern;
+            else if (source === "media") a.glyphPatternMatrixMedia = pattern;
+            else                         a.glyphPatternMatrixNotify = pattern;
+        } else if (surface === "strip") {
+            if (source === "battery")   a.glyphPatternStripBattery = pattern;
+            else if (source === "media") a.glyphPatternStripMedia = pattern;
+            else                         a.glyphPatternStripNotify = pattern;
+        } else {
+            if (source === "battery")   a.glyphPatternBarBattery = pattern;
+            else if (source === "media") a.glyphPatternBarMedia = pattern;
+            else                         a.glyphPatternBarNotify = pattern;
+        }
+        root.save();
+    }
+
+    function stepGlyphPattern(surface: string, source: string, by: int): void {
+        const list = GlyphEvents.patterns;
+        const cur = root.glyphPattern(surface, source);
+        let at = list.findIndex(p => p.id === cur);
+        if (at < 0)
+            at = 0;
+        root.setGlyphPattern(surface, source,
+            list[(at + by + list.length) % list.length].id);
+    }
+
+    // ── Which Glyph is on ─────────────────────────────────────────────
+    //
+    // The order a shortcut walks them. "" is all off, and it has to be one
+    // of the stops: a cycle that cannot reach silence is one you have to
+    // open a panel to escape.
+    readonly property var glyphOrder: ["", "matrix", "bar", "strip"]
+
+    function activeGlyph(): string {
+        if (a.glyphEnabled)      return "matrix";
+        if (a.glyphBarEnabled)   return "bar";
+        if (a.glyphStripEnabled) return "strip";
+        return "";
+    }
+
+    function cycleGlyph(by: int): string {
+        const order = root.glyphOrder;
+        const at = order.indexOf(root.activeGlyph());
+        const n = order.length;
+        const next = order[(((at + by) % n) + n) % n];
+        a.glyphEnabled      = next === "matrix";
+        a.glyphBarEnabled   = next === "bar";
+        a.glyphStripEnabled = next === "strip";
+        root.save();
+        return next;
+    }
+
+    // One at a time: they are the same object on the phone, a Matrix or a
+    // Bar or a ring depending which you own. Turning one off leaves them
+    // all off, which is allowed; this only forbids having two.
+    function enableGlyph(id: string, on: bool): void {
+        if (id === "matrix")
+            a.glyphEnabled = on;
+        else if (id === "bar")
+            a.glyphBarEnabled = on;
+        else if (id === "strip")
+            a.glyphStripEnabled = on;
+        else
+            return;
+
+        if (on) {
+            if (id !== "matrix") a.glyphEnabled = false;
+            if (id !== "bar")    a.glyphBarEnabled = false;
+            if (id !== "strip")  a.glyphStripEnabled = false;
+        }
+        root.save();
+    }
+
+    function addGlyphCustom(label: string, steps: var): string {
+        const list = (a.glyphCustom ?? []).slice();
+        // Time-stamped rather than counted: deleting one and composing
+        // another must not hand out an id a source is still pointing at.
+        const id = "own-" + Date.now().toString(36);
+        list.push({ id: id, label: label, steps: steps });
+        a.glyphCustom = list;
+        root.save();
+        return id;
+    }
+
+    function removeGlyphCustom(id: string): void {
+        a.glyphCustom = (a.glyphCustom ?? []).filter(c => c.id !== id);
+        // Anything pointing at it falls back, on every surface, or a
+        // deleted rhythm would leave a source silently doing nothing.
+        for (const surface of root.glyphSurfaces)
+            for (const source of root.glyphRhythmSources)
+                if (root.glyphPattern(surface, source) === id)
+                    root.setGlyphPattern(surface, source, "double");
+        root.save();
+    }
+
+    // Cities on the world clock. Ordered, because the widget reads them
+    // top to bottom, and capped at four because that is what the card can
+    // hold without the rows closing up.
+    readonly property int worldClockMax: 4
+
+    function hasCity(zone: string): bool {
+        return (a.worldClocks ?? []).indexOf(zone) >= 0;
+    }
+
+    function toggleCity(zone: string): void {
+        if (!zone) return;
+        const list = (a.worldClocks ?? []).slice();
+        const at = list.indexOf(zone);
+        if (at >= 0)
+            list.splice(at, 1);
+        else if (list.length < root.worldClockMax)
+            list.push(zone);
+        else
+            return;             // full: drop one first, silently doing it
+                                // for them would lose a city they chose.
+        a.worldClocks = list;
+        root.save();
+    }
+
+    function moveCity(index: int, by: int): void {
+        const list = (a.worldClocks ?? []).slice();
+        const to = index + by;
+        if (index < 0 || index >= list.length || to < 0 || to >= list.length)
+            return;
+        const [it] = list.splice(index, 1);
+        list.splice(to, 0, it);
+        a.worldClocks = list;
+        root.save();
+    }
+
+    function hasWidget(id: string): bool {
+        return (a.widgets ?? []).includes(id);
+    }
+
+    function addWidget(id: string): void {
+        if (!id || root.hasWidget(id)) return;
+        a.widgets = (a.widgets ?? []).concat([id]);
+        root.save();
+    }
+
+    function removeWidget(id: string): void {
+        a.widgets = (a.widgets ?? []).filter(x => x !== id);
+        root.save();
+    }
+
+    function toggleWidget(id: string): void {
+        if (root.hasWidget(id)) root.removeWidget(id);
+        else root.addWidget(id);
+    }
+
+    // Picking a face swaps it in, it does not stack a second one.
+    //
+    // Choosing "Clock, dial" when the Ndot clock was already there used to
+    // leave you with two clocks, which is never what picking a different
+    // face means. Only one widget of a family sits on the desktop, and the
+    // replacement takes the place the old one held, so the column does not
+    // reshuffle under a change of mind.
+    function chooseWidget(id: string): void {
+        if (!id) return;
+        if (root.hasWidget(id)) {
+            root.removeWidget(id);
+            return;
+        }
+        const group = WidgetRegistry.group(id);
+        const list = (a.widgets ?? []).slice();
+        const at = group === ""
+            ? -1
+            : list.findIndex(x => WidgetRegistry.group(x) === group);
+        if (at >= 0)
+            list[at] = id;
+        else
+            list.push(id);
+        a.widgets = list;
+        root.save();
+    }
+
+    function moveWidget(index: int, delta: int): void {
+        const list = (a.widgets ?? []).slice();
+        const to = index + delta;
+        if (to < 0 || to >= list.length) return;
+        const [item] = list.splice(index, 1);
+        list.splice(to, 0, item);
+        a.widgets = list;
+        root.save();
+    }
+
+    // Trades two places outright rather than moveWidget's remove-and-
+    // reinsert, which shifts everything between them too - what
+    // dropping one widget directly on another on the desktop should do.
+    function swapWidget(i: int, j: int): void {
+        const list = (a.widgets ?? []).slice();
+        if (i < 0 || j < 0 || i >= list.length || j >= list.length || i === j)
+            return;
+        const tmp = list[i];
+        list[i] = list[j];
+        list[j] = tmp;
+        a.widgets = list;
+        root.save();
+    }
+
+    function recenterGlyph(): void {
+        a.glyphX = -1;
+        a.glyphY = -1;
+        root.save();
+    }
+
+    function hasGlyphToy(id: string): bool {
+        return (a.glyphToys ?? []).includes(id);
+    }
+
+    function toggleGlyphToy(id: string): void {
+        const list = (a.glyphToys ?? []).slice();
+        const i = list.indexOf(id);
+        if (i >= 0) {
+            if (list.length <= 1)
+                return;
+            list.splice(i, 1);
+            if (a.glyphToy === id)
+                a.glyphToy = list[0];
+        } else {
+            list.push(id);
+        }
+        a.glyphToys = list;
+        root.save();
+    }
+
+    // ── Essential Apps on the desktop ─────────────────────────────────
+    // The rice's own widgets hold the left column; generated apps get
+    // the right one, so a bad prompt can never disturb the stock layout.
+
+    function hasDeskApp(id: string): bool {
+        return (a.deskApps ?? []).includes(id);
+    }
+
+    function addDeskApp(id: string): void {
+        if (!id || root.hasDeskApp(id)) return;
+        a.deskApps = (a.deskApps ?? []).concat([id]);
+        root.save();
+    }
+
+    function removeDeskApp(id: string): void {
+        if (!root.hasDeskApp(id)) return;
+        a.deskApps = (a.deskApps ?? []).filter(x => x !== id);
+        root.save();
+    }
+
+    function toggleDeskApp(id: string): void {
+        if (root.hasDeskApp(id)) root.removeDeskApp(id);
+        else root.addDeskApp(id);
+    }
+
+    function moveDeskApp(index: int, delta: int): void {
+        const list = (a.deskApps ?? []).slice();
+        const to = index + delta;
+        if (to < 0 || to >= list.length) return;
+        const [item] = list.splice(index, 1);
+        list.splice(to, 0, item);
+        a.deskApps = list;
+        root.save();
+    }
+
+    // See swapWidget - trades two places outright instead of shifting
+    // everything in between.
+    function swapDeskApp(i: int, j: int): void {
+        const list = (a.deskApps ?? []).slice();
+        if (i < 0 || j < 0 || i >= list.length || j >= list.length || i === j)
+            return;
+        const tmp = list[i];
+        list[i] = list[j];
+        list[j] = tmp;
+        a.deskApps = list;
+        root.save();
+    }
+
+    // Resolving wallpaper/dotWallpaperChar into an actual file URL is
+    // derived logic, not schema: see services/Wallpapers.qml.
+
+    function save(): void {
+        if (!root.ready)
+            return;
+        persist.restart();
+    }
+
+    // ── The bar's three islands ───────────────────────────────────────
+    //
+    // Read through _list, never touched directly: a JsonAdapter list is
+    // not a JavaScript array, Array.isArray says so, and splice on it
+    // does nothing at all.
+    function barZone(zone: string): var {
+        switch (zone) {
+        case "left":   return root._list(a.barLeft) ?? [];
+        case "centre": return root._list(a.barCentre) ?? [];
+        case "right":  return root._list(a.barRight) ?? [];
+        default:       return [];
+        }
+    }
+
+    function setBarZone(zone: string, list: var): void {
+        switch (zone) {
+        case "left":   a.barLeft = list; break;
+        case "centre": a.barCentre = list; break;
+        case "right":  a.barRight = list; break;
+        default:       return;
+        }
+        root.save();
+    }
+
+    function barZoneOf(id: string): string {
+        for (const z of ["left", "centre", "right"]) {
+            if (root.barZone(z).indexOf(id) >= 0)
+                return z;
+        }
+        return "";
+    }
+
+    // One home at a time. Placing an element pulls it out of wherever it
+    // was, so a list can never hold the same thing twice, and an empty
+    // zone means "not shown".
+    function barPlace(id: string, zone: string): void {
+        for (const z of ["left", "centre", "right"]) {
+            const list = root.barZone(z).filter(x => x !== id);
+            if (list.length !== root.barZone(z).length)
+                root.setBarZone(z, list);
+        }
+        if (zone === "")
+            return;
+        root.setBarZone(zone, root.barZone(zone).concat([id]));
+    }
+
+    function barMove(zone: string, index: int, delta: int): void {
+        const list = root.barZone(zone);
+        const to = index + delta;
+        if (index < 0 || index >= list.length || to < 0 || to >= list.length)
+            return;
+        const [item] = list.splice(index, 1);
+        list.splice(to, 0, item);
+        root.setBarZone(zone, list);
+    }
+
+    // ── The control centre's two lists ────────────────────────────────
+    //
+    // Same rule as the bar's islands: read through _list, never touched
+    // directly. Unlike the bar there is nowhere else for an entry to go,
+    // so one call adds or removes rather than moving between zones.
+    function ccZone(zone: string): var {
+        switch (zone) {
+        case "tiles":  return root._list(a.ccTiles) ?? [];
+        case "footer": return root._list(a.ccFooter) ?? [];
+        default:       return [];
+        }
+    }
+
+    function setCcZone(zone: string, list: var): void {
+        switch (zone) {
+        case "tiles":  a.ccTiles = list; break;
+        case "footer": a.ccFooter = list; break;
+        default:       return;
+        }
+        root.save();
+    }
+
+    function ccHas(zone: string, id: string): bool {
+        return root.ccZone(zone).indexOf(id) >= 0;
+    }
+
+    function ccToggle(zone: string, id: string): void {
+        const list = root.ccZone(zone);
+        const at = list.indexOf(id);
+        if (at >= 0)
+            list.splice(at, 1);
+        else
+            list.push(id);
+        root.setCcZone(zone, list);
+    }
+
+    function ccMove(zone: string, index: int, delta: int): void {
+        const list = root.ccZone(zone);
+        const to = index + delta;
+        if (index < 0 || index >= list.length || to < 0 || to >= list.length)
+            return;
+        const [item] = list.splice(index, 1);
+        list.splice(to, 0, item);
+        root.setCcZone(zone, list);
+    }
+
+    // Sections are plain booleans, but the settings page draws them from
+    // CcRegistry and so needs them by name. Spelled out for the same
+    // reason _list exists: indexing the adapter with a built string reads
+    // every value as its default.
+    function ccSection(id: string): bool {
+        switch (id) {
+        case "ccCalendar": return a.ccCalendar;
+        case "ccMedia":    return a.ccMedia;
+        case "ccUpdates":  return a.ccUpdates;
+        case "ccStats":    return a.ccStats;
+        case "ccCaffeine": return a.ccCaffeine;
+        case "ccDrives":   return a.ccDrives;
+        case "ccPhone":    return a.ccPhone;
+        default:           return false;
+        }
+    }
+
+    function setCcSection(id: string, on: bool): void {
+        switch (id) {
+        case "ccCalendar": a.ccCalendar = on; break;
+        case "ccMedia":    a.ccMedia = on; break;
+        case "ccUpdates":  a.ccUpdates = on; break;
+        case "ccStats":    a.ccStats = on; break;
+        case "ccCaffeine": a.ccCaffeine = on; break;
+        case "ccDrives":   a.ccDrives = on; break;
+        case "ccPhone":    a.ccPhone = on; break;
+        default:           return;
+        }
+        root.save();
+    }
+
+    function addDockApp(id: string): void {
+        if (!id || a.dockApps.includes(id)) return;
+        a.dockApps = a.dockApps.concat([id]);
+        root.save();
+    }
+
+    function removeDockApp(index: int): void {
+        const list = a.dockApps.slice();
+        list.splice(index, 1);
+        a.dockApps = list;
+        root.save();
+    }
+
+    function moveDockApp(index: int, delta: int): void {
+        const list = a.dockApps.slice();
+        const to = index + delta;
+        if (to < 0 || to >= list.length) return;
+        const [item] = list.splice(index, 1);
+        list.splice(to, 0, item);
+        a.dockApps = list;
+        root.save();
+    }
+
+    // Every JsonAdapter property, no exceptions: a button that claims to
+    // reset "everything" while skipping game mode, the crosshair, night
+    // light and the wallpaper is lying about what it does.
+    function reset(): void {
+        a.scale = 1.0;
+        a.theme = "dark";
+        a.accent = "#d71921";
+        a.drawWallpaper = true;
+        a.wallpaper = "";
+        a.dotWallpaperChar = "nothing-dark";
+        a.wallpaperScreenNames = [];
+        a.wallpaperScreenValues = [];
+        a.wallpaperFolder = "";
+        a.wallpaperRotate = 0;
+        a.wallpaperShuffle = true;
+        a.wallpaperEachScreen = false;
+        a.wallpaperFill = "crop";
+
+        a.barLeft = ["workspaces", "media"];
+        a.barCentre = ["apps", "clock", "essential"];
+        a.barRight = ["tray", "net", "bluetooth", "cpu", "ram", "gpu", "temp",
+                      "updates", "mic", "volume", "battery",
+                      "notifications", "privacy", "recording", "caffeine", "drives"];
+
+        a.showDock = true;
+        a.showDesktopWidgets = true;
+        a.widgets = ["date", "weather", "clock", "media"];
+        a.showTray = true;
+        a.showBattery = true;
+        a.showWorkspaces = true;
+        a.barShowCpu = true;
+        a.barShowRam = true;
+        a.barShowGpu = true;
+        a.barShowTemp = true;
+        a.barRadius = 4;
+
+        a.windowLayout = "tiling";
+        a.scrollColumnWidth = 0.5;
+        a.scrollFocusFit = "fit";
+        a.scrollDirection = "right";
+        a.scrollFullscreenOne = true;
+        a.scrollFollowFocus = true;
+        a.shelfSide = "right";
+        a.mainWidth = 0.62;
+
+        a.ccTiles = ["wifi", "bluetooth", "warp", "sound", "light", "notify", "record"];
+        a.ccFooter = ["night", "settings", "reload", "lock", "power"];
+        a.ccColumns = 3;
+        a.ccSquareIds = [];
+        a.ccCalendar = true;
+        a.ccMedia = true;
+        a.ccUpdates = true;
+        a.ccStats = true;
+        a.ccCaffeine = true;
+        a.ccDrives = true;
+        a.ccPhone = true;
+        a.phoneStart = true;
+        a.drivesAutomount = true;
+        a.drivesNotify = true;
+
+        a.notificationsEnabled = true;
+        a.notificationTimeout = 5;
+        a.osdEnabled = true;
+        a.essentialEnabled = true;
+        a.essentialSide = "right";
+        a.essentialSearch = true;
+        a.mindBackend = "stub";
+        a.translateLang = "English";
+
+        a.weatherEnabled = false;
+        a.weatherCity = "";
+
+        a.terminal = "kitty";
+        a.launcher = "";
+        a.fileManager = "dolphin";
+
+        a.dockAutoHide = true;
+        a.dockHideDelay = 700;
+        a.dockApps = ["firefox", "kitty", "org.kde.dolphin", "spotify", "com.google.Chrome"];
+
+        a.workspaceStyle = "japanese";
+        a.workspaceCount = 10;
+        a.workspaceRows = 2;
+        a.workspaceCols = 5;
+        a.workspaceScale = 0.18;
+
+        a.nightAutomatic = false;
+        a.nightFrom = "19:00";
+        a.nightTo = "06:30";
+        a.nightTemperature = 4000;
+        a.nightOn = false;
+        a.nightRestore = false;
+        a.ddcLinked = false;
+        a.ddcEvening = false;
+        a.ddcDayLevel = 80;
+        a.ddcEveningLevel = 35;
+        a.barCaffeineAdded = true;
+        a.barDrivesAdded = true;
+        a.autostartApps = [];
+        a.autoBackup = true;
+        a.autostartDelay = 3;
+        a.displayGrace = 15;
+        a.inputSensitivity = 0;
+        a.inputAccel = "";
+        a.inputNaturalScroll = false;
+        a.inputFollowMouse = true;
+        a.inputRepeatRate = 25;
+        a.inputRepeatDelay = 600;
+        a.inputNumlock = false;
+        a.touchpadNaturalScroll = true;
+        a.touchpadDisableTyping = true;
+        a.touchpadScrollFactor = 0.5;
+
+        a.lockBackground = "black";
+
+        a.idleDim = 120;
+        a.idleSaver = 0;
+        a.idleLock = 300;
+        a.idleOff = 600;
+        a.idleSuspend = 1200;
+
+        a.gameMode = false;
+        a.gameNoAnimations = true;
+        a.gameNoBlur = true;
+        a.gameNoShadow = true;
+        a.gameTearing = true;
+        a.gameInhibitIdle = true;
+        a.gameHideShell = false;
+        a.gameUnfocusedFps = 30;
+        a.gameFpsLimit = 0;
+
+        a.crosshair = false;
+        a.crosshairStyle = "crossdot";
+        a.crosshairSize = 14;
+        a.crosshairThickness = 2;
+        a.crosshairGap = 4;
+        a.crosshairColor = "#00ff88";
+        a.crosshairOutline = true;
+
+        a.gameWidgets = [];
+        a.gameImage = "";
+
+        a.glyphEnabled = true;
+        a.glyphX = -1;
+        a.glyphY = -1;
+        a.glyphSize = 220;
+        a.glyphAbove = false;
+        a.glyphToy = "clock";
+        a.glyphBarEnabled = false;
+        a.glyphBarX = -1;
+        a.glyphBarY = -1;
+        a.glyphBarLength = 300;
+        a.glyphBarAbove = false;
+        for (const surface of root.glyphSurfaces) {
+            root.toggleGlyphEvent(surface, "");   // no-op, keeps the shape
+            root.setGlyphQuiet(surface, true);
+            root.setGlyphLevel(surface, 1);
+            root.setGlyphPattern(surface, "notify", "double");
+            root.setGlyphPattern(surface, "battery", "blink");
+            root.setGlyphPattern(surface, "media", "blink");
+        }
+        a.glyphCustom = [];
+        a.glyphAppPatterns = {};
+        a.glyphStripEnabled = false;
+        a.glyphStripX = -1;
+        a.glyphStripY = -1;
+        a.glyphStripSize = 240;
+        a.glyphStripAbove = false;
+        a.glyphToys = [
+            "clock", "battery", "system", "notices", "counter",
+            "dice", "timer", "pendulum", "visualizer"
+        ];
+
+        // gameNotes is left intact: it is user-written text, not a setting.
+        // Resetting the UI should not wipe it.
+
+        root.save();
+    }
+
+    // Migration: early versions stored objects
+    // { icon, exec, match }. Convert them to .desktop identifiers.
+    function migrate(): void {
+        // The caffeine and drives indicators only show while sleep is held
+        // off or a drive is mounted, so each is added to bars saved before
+        // it existed, once. Taking one out in Settings > Bar is respected
+        // after that.
+        if (!a.barDrivesAdded) {
+            const right = root._list(a.barRight) ?? [];
+            const all = right.concat(root._list(a.barLeft) ?? [], root._list(a.barCentre) ?? []);
+            if (all.indexOf("drives") < 0)
+                a.barRight = right.concat(["drives"]);
+            a.barDrivesAdded = true;
+            root.save();
+        }
+        if (!a.barCaffeineAdded) {
+            const right = root._list(a.barRight) ?? [];
+            const all = right.concat(root._list(a.barLeft) ?? [], root._list(a.barCentre) ?? []);
+            if (all.indexOf("caffeine") < 0)
+                a.barRight = right.concat(["caffeine"]);
+            a.barCaffeineAdded = true;
+            root.save();
+        }
+        const list = a.dockApps ?? [];
+        if (list.length > 0 && typeof list[0] !== "string") {
+            const ids = [];
+            for (const item of list) {
+                const id = (typeof item === "string") ? item : (item.exec ?? item.match ?? "");
+                if (id !== "" && !ids.includes(id)) ids.push(id);
+            }
+            a.dockApps = ids;
+            root.save();
+            console.info("Config: dockApps migrated to .desktop identifiers");
+        }
+
+        // These were one flat set shared by every surface. Per surface
+        // now, so the same values become each one's starting point rather
+        // than being reset: nobody loses what they had chosen.
+
+        // The old column widget "glyph" is now a disc toy.
+        let widgets = a.widgets ?? [];
+        if (widgets.some(w => w === "glyph" || w?.id === "glyph")) {
+            widgets = widgets.filter(w => (w?.id ?? w) !== "glyph");
+            a.widgets = widgets;
+            a.glyphEnabled = true;
+            root.save();
+            console.info("Config: glyph widget moved to Glyph Matrix");
+        }
+
+        // Widgets were briefly cells on a free grid. That is undone:
+        // they stack in a column again, so only the order survives, taken
+        // from how far down the screen each one had been dropped.
+        if (widgets.length > 0 && typeof widgets[0] === "object") {
+            a.widgets = widgets
+                .slice()
+                .sort((x, y) => (x?.row ?? 0) - (y?.row ?? 0))
+                .map(w => w?.id ?? "")
+                .filter(id => id !== "");
+            root.save();
+            console.info("Config: widgets back to an ordered column");
+        }
+    }
+
+    NProcess {
+        id: mkdir
+        running: true
+        command: ["mkdir", "-p", root.dir]
+    }
+
+    Timer {
+        id: persist
+        interval: 80
+        onTriggered: if (root.ready) file.writeAdapter()
+    }
+
+    FileView {
+        id: file
+        path: root.path
+        watchChanges: true
+        preload: true
+        blockLoading: true
+        onFileChanged: reload()
+        onAdapterUpdated: {
+            if (root.ready)
+                persist.restart();
+        }
+        onLoaded: {
+            root.ready = true;
+            root.migrate();
+        }
+        // First launch: write the defaults.
+        onLoadFailed: (err) => {
+            if (err === FileViewError.FileNotFound) {
+                root.ready = true;
+                writeAdapter();
+            }
+        }
+
+        adapter: JsonAdapter {
+            id: a
+
+            property real   scale: 1.0
+            // "dark", "light" or "manga". Nothing OS ships the first two;
+            // the dark one is the signature look, so it stays the default.
+            property string theme: "dark"
+            property string accent: "#d71921"
+            property bool   drawWallpaper: true
+            // Empty = hypr/wallpaper.png, "nothing-dots" = the pair in
+            // hypr/wallpapers/, anything else is a path (see wallpaperUrl).
+            property string wallpaper: ""
+            // Which shipped default: one of Wallpapers.dotWallpaperChars'
+            // own values, each a file dropped into hypr/wallpapers/ as
+            // <value>.png. Only consulted when the shipped set is the
+            // chosen image.
+            property string dotWallpaperChar: "nothing-dark"
+            // One screen's own picture, by connector - two parallel lists
+            // (names[i] -> values[i]), not one { "DP-1": "/path" } map:
+            // same rule as the bar's islands and the glyph surfaces, a var
+            // property with an empty-object default never loads back from
+            // the file, while one with an array default does. A screen not
+            // listed shows `wallpaper`. Same values as `wallpaper`. Read
+            // and written through Config.wallpaperScreenMap/setWallpaperScreen,
+            // never indexed directly - see _list.
+            property var    wallpaperScreenNames: []
+            property var    wallpaperScreenValues: []
+            // Where the picker and the slideshow look first; "" = ~/Pictures/Wallpapers.
+            property string wallpaperFolder: ""
+            // Minutes between two pictures from that folder, 0 = never.
+            property int    wallpaperRotate: 0
+            property bool   wallpaperShuffle: true
+            // The slideshow gives each screen a different picture.
+            property bool   wallpaperEachScreen: false
+            // "crop" fills the screen, "fit" shows the whole picture on black.
+            property string wallpaperFill: "crop"
+
+            // The bar, one ordered list per island. Empty is a legitimate
+            // answer: an island with nothing in it simply does not draw.
+            //
+            // Spelled out as three lists rather than one map of zone to
+            // list, because a var property whose default is an empty
+            // object never loads back from the file, while one with an
+            // array default does. See the glyph surfaces for the same
+            // scar.
+            property var barLeft: ["workspaces", "media"]
+            property var barCentre: ["apps", "clock", "essential"]
+            property var barRight: ["tray", "net", "bluetooth", "cpu", "ram",
+                                    "gpu", "temp", "updates", "mic", "volume",
+                                    "battery", "notifications", "privacy",
+                                    "recording", "caffeine", "drives"]
+
+            property bool showDock: true
+            property bool showDesktopWidgets: true
+
+            // Desktop widgets and where they sit, as cells of a logical
+            // fixed-size grid (see Desktop.qml). Heights stay natural:
+            // the media tile grows with the number of players and the
+            // system tile with zram and swap, so only the anchor and the
+            // width in columns are stored.
+            // Known identifiers: date, weather, clock, media, system, calendar.
+            property var widgets: ["date", "weather", "clock", "media"]
+
+            // Minutes at the machine before the screen-time face frowns.
+            property int screenTimeLimit: 240
+
+            // Cities for the world clock, as tz database zone names.
+            property string countdownLabel: "New year"
+            property string countdownDate: ""
+            property int countdownShape: 0
+
+            property var worldClocks: ["Europe/Paris", "America/New_York",
+                                       "Asia/Tokyo", "Australia/Sydney"]
+
+            // Where the photo widget looks. Empty means the usual place.
+            property string photoDir: ""
+
+            // Essential Apps pinned to the right column, in display order.
+            property var deskApps: []
+            property bool showDeskApps: true
+            // Bar button, left of the clock, mirroring the Essential Key.
+            property bool appsKey: true
+
+            // "black" or "wallpaper", behind the lock screen. Black is
+            // the Nothing look and the safe default: a wallpaper can be
+            // anything, including something that makes white text on it
+            // unreadable. The layout keeps the right of the screen clear
+            // either way, so a chosen wallpaper is actually visible.
+            property string lockBackground: "black"
+
+            // The idle timeline, in seconds, 0 for never. Written out as
+            // a hypridle config by services/Idle.qml, because hypridle
+            // reads its file once at start and has no runtime interface.
+            property int idleDim: 120
+            property int idleLock: 300
+            property int idleOff: 600
+            // Seconds before the dot clock screensaver; 0 = never (default).
+            property int idleSaver: 0
+            property int idleSuspend: 1200
+            property bool showTray: true
+            property bool showBattery: true
+            property bool showWorkspaces: true
+            property bool barShowCpu: true
+            property bool barShowRam: true
+            property bool barShowGpu: true
+            property bool barShowTemp: true
+            property int  barRadius: 4   // screen px, matches Theme.r.panel's default
+
+            // tiling is Hyprland's dwindle, which is what this rice has
+            // always used. scrolling is Hyprland's own scrolling layout,
+            // built into the compositor since 0.54 and needing no plugin.
+            property string windowLayout: "tiling"   // tiling | scrolling
+            property real   scrollColumnWidth: 0.5   // 0.1 to 1.0
+            property string scrollFocusFit: "fit"    // fit | center
+            property string scrollDirection: "right" // right|left|down|up
+            property bool   scrollFullscreenOne: true
+            property bool   scrollFollowFocus: true
+            // The essential layout: which side the shelf of parked
+            // windows sits on, and what share the main pane takes.
+            property string shelfSide: "right"   // right | left
+            property real   mainWidth: 0.62      // 0.25 to 0.9
+
+            // The defaults are the panel exactly as it was before any of
+            // this was configurable: same seven tiles, same five buttons,
+            // every block on. Nobody's control centre changes by updating.
+            property var ccTiles: ["wifi", "bluetooth", "warp",
+                                   "sound", "light", "notify", "record"]
+            property var ccFooter: ["night", "settings", "reload",
+                                    "lock", "power"]
+            property int  ccColumns: 3      // 2 to 4
+            property var  ccSquareIds: []
+            property bool ccCalendar: true
+            property bool ccMedia: true
+            property bool ccUpdates: true
+            property bool ccStats: true
+            property bool ccCaffeine: true
+            // Removable drives: the section only shows with one plugged in.
+            property bool ccDrives: true
+            // KDE Connect: the phone section shows only with one connected;
+            // the daemon is started at login only if kdeconnect is installed.
+            property bool ccPhone: true
+            property bool phoneStart: true
+            property bool drivesAutomount: true
+            property bool drivesNotify: true
+
+            property bool notificationsEnabled: true
+            property int  notificationTimeout: 5
+            property bool osdEnabled: true
+            property bool   essentialEnabled: true
+            property string essentialSide: "right"   // right | left
+            property bool   essentialSearch: true    // mix captures + Ask in SUPER
+            property string mindBackend: "stub"      // stub | ollama | gemini
+            property string translateLang: "English" // target language for screen translation
+
+            property bool   weatherEnabled: false
+            property string weatherCity: ""
+
+            property string terminal: "kitty"
+            property string launcher: ""
+            property string fileManager: "dolphin"
+
+            // .desktop identifiers. The dock only shows those that exist on
+            // this machine, so a missing entry is ignored instead of a dead icon.
+            property bool dockAutoHide: true
+            property int  dockHideDelay: 700   // grace ms after the pointer leaves
+
+            // arabic | roman | japanese
+            property string workspaceStyle: "japanese"
+            property int workspaceCount: 10
+
+            // Preview grid: 2 rows of 5, thumbnails at 18 % of the screen
+            property int  workspaceRows: 2
+            property int  workspaceCols: 5
+            property real workspaceScale: 0.18
+
+            property bool   nightAutomatic: false
+            property string nightFrom: "19:00"
+            property string nightTo: "06:30"
+            property int    nightTemperature: 4000
+            // Last manual on/off, and whether login brings it back. Off by
+            // default so a fresh install starts the way it always has.
+            property bool   nightOn: false
+            property bool   nightRestore: false
+            // SUPER+P > Light: one slider moves every external monitor.
+            property bool   ddcLinked: false
+            // Monitor brightness by time of day (night-light hours).
+            property bool   ddcEvening: false
+            property int    ddcDayLevel: 80
+            property int    ddcEveningLevel: 35
+            // The caffeine bar item was added to an existing bar once.
+            property bool   barCaffeineAdded: false
+            property bool   barDrivesAdded: false
+            // Settings > System > Startup: .desktop ids started once per
+            // Hyprland session, a few seconds after login.
+            property var    autostartApps: []
+            // One copy of config.json a day, seven kept (ConfigBackup).
+            property bool   autoBackup: true
+            property int    autostartDelay: 3
+            // Seconds a display change waits for Keep before undoing itself.
+            property int    displayGrace: 15
+
+            // ── Input (Settings > Input, written to hypr/input.lua) ───
+            // Defaults are general.lua's own values, so the first change
+            // on that page moves only what was changed.
+            property real   inputSensitivity: 0
+            property string inputAccel: ""
+            property bool   inputNaturalScroll: false
+            property bool   inputFollowMouse: true
+            property int    inputRepeatRate: 25
+            property int    inputRepeatDelay: 600
+            property bool   inputNumlock: false
+            property bool   touchpadNaturalScroll: true
+            property bool   touchpadDisableTyping: true
+            property real   touchpadScrollFactor: 0.5
+
+            // ── Game mode ─────────────────────────────────────────────
+            property bool gameMode: false
+            property bool gameNoAnimations: true
+            property bool gameNoBlur: true
+            property bool gameNoShadow: true
+            property bool gameTearing: true
+            property bool gameInhibitIdle: true
+            property bool gameHideShell: false
+            property int  gameUnfocusedFps: 30
+            property int  gameFpsLimit: 0        // 0 = unlimited (MangoHud)
+
+            // cross | dot | circle | crossdot | tshape
+            property bool   crosshair: false
+            property string crosshairStyle: "crossdot"
+            property int    crosshairSize: 14
+            property int    crosshairThickness: 2
+            property int    crosshairGap: 4
+            property string crosshairColor: "#00ff88"
+            property bool   crosshairOutline: true
+
+            property string gameNotes: ""
+
+            // Game bar canvas: position, size and state of each widget
+            // placed on the screen.
+            property var gameWidgets: []
+            property string gameImage: ""
+
+            // Glyph Matrix: floating disc. x/y at -1 = automatic placement
+            // on the right of the screen, until the first drag-and-drop.
+            property bool   glyphEnabled: true
+            property int    glyphX: -1
+            property int    glyphY: -1
+            property int    glyphSize: 220
+            property bool   glyphAbove: false
+            property string glyphToy: "clock"
+            property bool glyphBarEnabled: false
+            property int glyphBarX: -1
+            property int glyphBarY: -1
+            property int glyphBarLength: 300
+            property bool glyphBarAbove: false
+            // Per surface, one property each, spelled out.
+            //
+            // Not a map keyed by surface: a JsonAdapter property declared
+            // with an empty object default never loads anything from the
+            // file, so every nested map read back as {} and every setting
+            // silently fell to its default. The properties that do work
+            // here all have a concrete default, so these do too.
+            property var glyphEventsMatrix: ["volume", "notify", "recording", "reveal"]
+            property var glyphEventsBar:    ["volume", "notify", "recording", "reveal"]
+            property var glyphEventsStrip:  ["volume", "notify", "recording", "reveal"]
+
+            property var glyphChannelsMatrix: ["battery", "volume", "cpu", "ram", "net", "notifs"]
+            property var glyphChannelsBar:    ["battery", "volume", "cpu", "ram", "net", "notifs"]
+            property var glyphChannelsStrip:  ["battery", "volume", "cpu", "ram", "net", "notifs"]
+
+            // One string per surface per source, not a map. A JsonAdapter
+            // var declared with an object default never loads from the
+            // file; one declared with a list does. Strings always do.
+            property string glyphPatternMatrixNotify:  "double"
+            property string glyphPatternMatrixBattery: "blink"
+            property string glyphPatternMatrixMedia:   "blink"
+            property string glyphPatternBarNotify:     "double"
+            property string glyphPatternBarBattery:    "blink"
+            property string glyphPatternBarMedia:      "blink"
+            property string glyphPatternStripNotify:   "double"
+            property string glyphPatternStripBattery:  "blink"
+            property string glyphPatternStripMedia:    "blink"
+
+            property bool glyphQuietMatrix: true
+            property bool glyphQuietBar: true
+            property bool glyphQuietStrip: true
+
+            property int glyphLevelMatrix: 1
+            property int glyphLevelBar: 1
+            property int glyphLevelStrip: 1
+
+            // Composed in the launcher. { id, label, steps }.
+            property var glyphCustom: []
+
+            // { appId: patternId }. Missing an entry means "default".
+            property var glyphAppPatterns: ({})
+
+
+            property bool glyphStripEnabled: false
+            property int glyphStripX: -1
+            property int glyphStripY: -1
+            property int glyphStripSize: 240
+            property bool glyphStripAbove: false
+            property var    glyphToys: [
+                "clock", "battery", "system", "notices", "counter",
+                "dice", "timer", "pendulum", "visualizer"
+            ]
+
+            property var dockApps: [
+                "firefox", "kitty", "org.kde.dolphin", "spotify", "com.google.Chrome"
+            ]
+        }
+    }
+}

@@ -1,0 +1,376 @@
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Wayland
+import Quickshell.Hyprland
+import Quickshell.Services.SystemTray
+import Quickshell.Services.UPower
+import ".."
+import "../components"
+import "../components/bar"
+import "../services"
+
+// Four independent islands. The clock and Essential Key sit together at
+// the centre of the screen; workspaces and the CC stay on the edges.
+//
+// The CC and flyouts live on a separate layer. Growing the bar window
+// reconfigures the Hyprland layer and the navbar blinks as if it were
+// reloading.
+Item {
+    id: root
+    required property var modelData
+
+PanelWindow {
+    id: bar
+
+    screen: root.modelData
+    color: "transparent"
+    WlrLayershell.layer: WlrLayer.Top
+    WlrLayershell.namespace: "nothing-bar"
+
+    anchors { top: true; left: true; right: true }
+    implicitHeight: Theme.z.barWin
+    exclusiveZone: Theme.z.bar + Theme.px(9)
+
+    mask: Region {
+        intersection: Intersection.Combine
+        regions: [
+            Region { item: leftIsland },
+            // The bar only takes clicks where an island is, and the
+            // centre is now a variable number of them. Regions are not
+            // Items so a Repeater cannot make them: a fixed pool is
+            // indexed into instead.
+            //
+            // Both centreRep.count and centreIds are named on purpose.
+            // count is what makes the binding re-run once the delegates
+            // exist: evaluated during construction it found none, handed
+            // back null, and never looked again, so the whole centre was
+            // drawn and took no clicks at all. centreIds is what makes it
+            // re-run when the list is reordered.
+            Region { item: (centreRep.count > 0 && bar.centreIds.length > 0)
+                ? centreRep.itemAt(0) : null },
+            Region { item: (centreRep.count > 1 && bar.centreIds.length > 1)
+                ? centreRep.itemAt(1) : null },
+            Region { item: (centreRep.count > 2 && bar.centreIds.length > 2)
+                ? centreRep.itemAt(2) : null },
+            Region { item: (centreRep.count > 3 && bar.centreIds.length > 3)
+                ? centreRep.itemAt(3) : null },
+            Region { item: (centreRep.count > 4 && bar.centreIds.length > 4)
+                ? centreRep.itemAt(4) : null },
+            Region { item: (centreRep.count > 5 && bar.centreIds.length > 5)
+                ? centreRep.itemAt(5) : null },
+            Region { item: rightIsland }
+        ]
+    }
+
+    readonly property var batt: UPower.displayDevice
+    readonly property bool hasBatt: (batt?.isLaptopBattery ?? false) && Config.showBattery
+    readonly property var trayItems: SystemTray.items?.values ?? []
+    readonly property bool onFocusedMonitor:
+        (Hyprland.focusedMonitor?.name ?? "") === (root.modelData?.name ?? "")
+
+    // Read once per change rather than in every binding: barZone builds
+    // a fresh array each call, and a Repeater model that is a new array
+    // every evaluation rebuilds its delegates constantly.
+    readonly property var leftIds: Config.barLeft ? Config.barZone("left") : []
+    readonly property var centreIds: Config.barCentre ? Config.barZone("centre") : []
+    readonly property var rightIds: Config.barRight ? Config.barZone("right") : []
+
+    readonly property int edge: Theme.px(10)
+    readonly property int islandGap: Theme.px(12)
+    readonly property real midX: (width - midCluster.width) / 2
+    readonly property real leftMax: Math.max(Theme.px(72), midX - edge - islandGap)
+    readonly property real rightMax: Math.max(Theme.px(72),
+        width - edge - midX - midCluster.width - islandGap)
+
+    // Where each recap sits, read from whichever element last asked to
+    // hold it open. CPU, RAM, GPU and temperature all share one recap
+    // panel, so this is not "the position of the CPU element" specifically
+    // - it is "wherever the pointer currently is", which is the same
+    // thing while only one of them can be hovered at a time.
+    property real recapAnchorX: 0
+    property real battAnchorX: 0
+    property real mediaAnchorX: 0
+
+    // The flyouts are held open by whatever is hovering, and what hovers
+    // now lives in a component that cannot see the timers. One call each
+    // rather than a reach into this window's internals. The position is
+    // only meaningful on the way in - the recap hovering itself passes
+    // its own last-known anchor back unchanged, not its own geometry, so
+    // moving the pointer from the element down into the panel it opened
+    // does not make the panel jump out from under it.
+    function holdRecap(on: bool, x: real): void {
+        if (on) { recapHide.stop(); bar.recapKeep = true; bar.recapAnchorX = x; }
+        else recapHide.restart();
+    }
+
+    function holdBatt(on: bool, x: real): void {
+        if (on) { battHide.stop(); bar.battKeep = true; bar.battAnchorX = x; }
+        else battHide.restart();
+    }
+
+    function holdMedia(on: bool, x: real): void {
+        if (on) { mediaHide.stop(); bar.mediaKeep = true; bar.mediaAnchorX = x; }
+        else mediaHide.restart();
+    }
+
+    function openCc(): void {
+        GlobalState.controlCenterOpen = !GlobalState.controlCenterOpen;
+    }
+
+    property bool recapKeep: false
+    property bool battKeep: false
+    property bool mediaKeep: false
+    property int essentialClicks: 0
+    property bool essentialHeld: false
+    Timer {
+        id: recapHide
+        interval: 220
+        onTriggered: bar.recapKeep = false
+    }
+    Timer {
+        id: battHide
+        interval: 220
+        onTriggered: bar.battKeep = false
+    }
+    Timer {
+        id: mediaHide
+        interval: 220
+        onTriggered: bar.mediaKeep = false
+    }
+
+    // ── Left: workspaces + media ──────────────────────────────────────
+    // ── Left ──────────────────────────────────────────────────────────
+    // Contents come from Config.barLeft: see components/BarRegistry.qml.
+    BarIsland {
+        id: leftIsland
+        anchors.left: parent.left
+        anchors.leftMargin: bar.edge
+        anchors.top: parent.top
+        anchors.topMargin: Theme.px(5)
+        width: Math.min(implicitWidth, bar.leftMax)
+        visible: bar.leftIds.length > 0
+        onActivated: bar.openCc()
+        onSecondary: GlobalState.toggleLauncher()
+
+        Repeater {
+            model: bar.leftIds
+
+            RowLayout {
+                required property string modelData
+                required property int index
+                Layout.alignment: Qt.AlignVCenter
+                spacing: 0
+
+                // Between elements, never before the first: a separator
+                // leading an island reads as a crack in it.
+                BarSeparator { visible: index > 0 && slotItem.applies }
+
+                BarSlot {
+                    id: slotItem
+                    Layout.alignment: Qt.AlignVCenter
+                    itemId: modelData
+                    win: bar
+                }
+            }
+        }
+    }
+
+    // ── Centre ────────────────────────────────────────────────────────
+    // One island per element, side by side and centred on the screen as a
+    // group. Contents come from Config.barCentre.
+    Row {
+        id: midCluster
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: Theme.px(5)
+        height: Theme.z.bar
+        spacing: bar.islandGap
+
+        Repeater {
+            id: centreRep
+            model: bar.centreIds
+
+            NCard {
+                id: centreCard
+                required property string modelData
+                radius: Config.barRadius
+                height: Theme.z.bar
+                // A wide element sizes to its own content plus breathing
+                // room; a square one keeps the bar's height, so it comes
+                // out an actual square rather than a stretched one.
+                // Same breathing room BarIsland gives its own pills
+                // (pad * 2), not a second number for the same idea.
+                width: BarRegistry.isWide(modelData)
+                    ? centreSlot.implicitWidth + Theme.px(12) * 2
+                    : Theme.z.bar
+                visible: centreSlot.applies
+
+                BarSlot {
+                    id: centreSlot
+                    anchors.centerIn: parent
+                    itemId: centreCard.modelData
+                    win: bar
+                }
+            }
+        }
+    }
+
+    // ── Right ─────────────────────────────────────────────────────────
+    // Contents come from Config.barRight.
+    BarIsland {
+        id: rightIsland
+        anchors.right: parent.right
+        anchors.rightMargin: bar.edge
+        anchors.top: parent.top
+        anchors.topMargin: Theme.px(5)
+        width: Math.min(implicitWidth, bar.rightMax)
+        visible: bar.rightIds.length > 0
+        onActivated: bar.openCc()
+        onSecondary: GlobalState.toggleLauncher()
+        onScrolled: (d) => {
+            if (!Audio.audio) return;
+            Audio.audio.volume = Math.max(0, Math.min(1, Audio.audio.volume + d * 0.05));
+        }
+
+        Repeater {
+            model: bar.rightIds
+
+            // Straight into the island, with no wrapper: BarIsland already
+            // spaces its children by 10, and the margin this used to carry
+            // simply added to that and left nine pixels hanging off the
+            // end of the last element.
+            BarSlot {
+                required property string modelData
+                Layout.alignment: Qt.AlignVCenter
+                itemId: modelData
+                win: bar
+            }
+        }
+    }
+
+    }
+
+    PanelWindow {
+        id: dropLayer
+        screen: root.modelData
+        color: "transparent"
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "nothing-overlay"
+        anchors { top: true; left: true; right: true }
+        implicitHeight: screen.height
+        exclusiveZone: -1
+        exclusionMode: ExclusionMode.Ignore
+
+        readonly property int dropY: Theme.px(5) + Theme.z.bar + Theme.px(8)
+
+        mask: Region {
+            intersection: Intersection.Combine
+            regions: [
+                Region { item: cc.open ? cc : null },
+                Region { item: recap.shown ? recap : null },
+                Region { item: battRecap.shown ? battRecap : null },
+                Region { item: mediaRecap.shown ? mediaRecap : null },
+                Region { item: flyout.open ? flyout : null },
+                Region { item: audioFlyout.open ? audioFlyout : null },
+                Region { item: lightFlyout.open ? lightFlyout : null }
+            ]
+        }
+
+    ControlCenter {
+        id: cc
+        open: GlobalState.controlCenterOpen && bar.onFocusedMonitor
+        maxHeight: bar.screen.height - Theme.px(20) - Theme.z.barWin - Theme.px(8)
+        onRequestClose: GlobalState.controlCenterOpen = false
+        onOpenChanged: if (open) {
+            GlobalState.netPanel = "";
+            GlobalState.audioPanel = false;
+            GlobalState.lightPanel = false;
+        }
+        anchors.top: parent.top
+        anchors.topMargin: dropLayer.dropY
+        anchors.horizontalCenter: parent.horizontalCenter
+    }
+
+    // Centred under whichever element opened it (GlobalState.popupX, set
+    // at the moment of opening) rather than pinned to the right edge: net,
+    // bluetooth and volume can each be dragged to any island now, and a
+    // flyout that stays in the corner they used to default to is a
+    // flyout that opens under the wrong thing the moment they are not.
+    // Clamped so it still lands fully on screen from an island near
+    // either edge.
+    NetFlyout {
+        id: flyout
+        anchors.top: parent.top
+        anchors.topMargin: dropLayer.dropY
+        x: Math.max(bar.edge, Math.min(GlobalState.popupX - width / 2,
+                                        dropLayer.width - bar.edge - width))
+        visible: bar.onFocusedMonitor && (open || opacity > 0.01)
+    }
+
+    AudioFlyout {
+        id: audioFlyout
+        anchors.top: parent.top
+        anchors.topMargin: dropLayer.dropY
+        x: Math.max(bar.edge, Math.min(GlobalState.popupX - width / 2,
+                                        dropLayer.width - bar.edge - width))
+        visible: bar.onFocusedMonitor && (open || opacity > 0.01)
+    }
+
+    BrightnessFlyout {
+        id: lightFlyout
+        anchors.top: parent.top
+        anchors.topMargin: dropLayer.dropY
+        x: Math.max(bar.edge, Math.min(GlobalState.popupX - width / 2,
+                                        dropLayer.width - bar.edge - width))
+        visible: bar.onFocusedMonitor && (open || opacity > 0.01)
+    }
+
+    // Centred under whichever gauge, battery or now-playing element is
+    // actually being hovered (bar.recapAnchorX etc., set at that moment),
+    // not pinned to the right edge or to the left island specifically:
+    // any of these can be dragged to any island, same reasoning as the
+    // three flyouts above.
+    SysRecap {
+        id: recap
+        onHoveredChanged: bar.holdRecap(hovered, bar.recapAnchorX)
+        shown: bar.recapKeep && !cc.open && !flyout.open && !audioFlyout.open && !lightFlyout.open && bar.onFocusedMonitor
+        anchors.top: parent.top
+        anchors.topMargin: dropLayer.dropY
+        x: Math.max(bar.edge, Math.min(bar.recapAnchorX - width / 2,
+                                        dropLayer.width - bar.edge - width))
+    }
+
+    BattRecap {
+        id: battRecap
+        batt: bar.batt
+        onHoveredChanged: bar.holdBatt(hovered, bar.battAnchorX)
+        shown: bar.battKeep && !cc.open && !flyout.open && !audioFlyout.open && !lightFlyout.open && bar.onFocusedMonitor
+        anchors.top: parent.top
+        anchors.topMargin: dropLayer.dropY
+        x: Math.max(bar.edge, Math.min(bar.battAnchorX - width / 2,
+                                        dropLayer.width - bar.edge - width))
+    }
+
+    MediaRecap {
+        id: mediaRecap
+        onHoveredChanged: bar.holdMedia(hovered, bar.mediaAnchorX)
+        shown: bar.mediaKeep && Player.active && !cc.open && !flyout.open && !audioFlyout.open && !lightFlyout.open && bar.onFocusedMonitor
+        anchors.top: parent.top
+        anchors.topMargin: dropLayer.dropY
+        x: Math.max(bar.edge, Math.min(bar.mediaAnchorX - width / 2,
+                                        dropLayer.width - bar.edge - width))
+    }
+
+    HyprlandFocusGrab {
+        active: (cc.open || flyout.open || audioFlyout.open || lightFlyout.open) && bar.onFocusedMonitor
+        windows: [bar, dropLayer]
+        onCleared: {
+            GlobalState.controlCenterOpen = false;
+            GlobalState.netPanel = "";
+            GlobalState.audioPanel = false;
+            GlobalState.lightPanel = false;
+        }
+    }
+    }
+}

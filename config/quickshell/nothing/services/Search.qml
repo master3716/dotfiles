@@ -1,0 +1,674 @@
+pragma Singleton
+
+import QtQuick
+import Quickshell
+import Quickshell.Io
+import ".."
+
+// Essential Search: prefixes switch the mode; with no prefix, apps,
+// actions, Essential Space captures and settings are mixed. Ask sends
+// the query to Gemini without leaving the overlay.
+Singleton {
+    id: root
+
+    readonly property var prefixes: ({
+        action:  "/",
+        app:     ">",
+        clip:    ";",
+        emoji:   ":",
+        math:    "=",
+        nothing: "#",
+        shell:   "$",
+        web:     "?",
+        files:   "~"
+    })
+
+    property string query: ""
+    property string mathResult: ""
+    property bool mathRefused: false
+    property var emojis: []
+    property string askAnswer: ""
+    property string askFor: ""
+    property bool askBusy: false
+
+    readonly property string engine: "https://duckduckgo.com/?q="
+
+    // ── Emoji, loaded once ────────────────────────────────────────────
+    // Read via a process rather than FileView: its onLoaded signal fires
+    // before the text property is populated, and JSON.parse would get
+    // an empty string.
+    NProcess {
+        running: true
+        command: ["cat", Quickshell.shellPath("assets/emoji.json")]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { root.emojis = JSON.parse(text); }
+                catch (e) { console.warn("emoji.json unreadable", e); }
+            }
+        }
+    }
+
+    // ── Calculator via qalc ─────────────────────────────────────────
+    NProcess {
+        id: math
+        stdout: StdioCollector {
+            onStreamFinished: root.mathResult = text.trim()
+        }
+    }
+
+    // ── Files ("~") ───────────────────────────────────────────────────
+    // fd over the home folder (hidden and ignored files left out, so
+    // node_modules and caches do not drown the result), plocate when fd is
+    // missing. Thirty hits, newest query only: a slower answer to an older
+    // keystroke is dropped rather than shown.
+    property var fileHits: []
+    property string fileFor: ""
+
+    Timer {
+        id: fileDebounce
+        interval: 160
+        onTriggered: {
+            const q = root.body(root.query).trim();
+            if (q.length < 2) { root.fileHits = []; return; }
+            finder.wanted = q;
+            finder.running = false;
+            finder.command = ["sh", "-c",
+                'if command -v fd >/dev/null; then fd --max-results 30 --ignore-case --fixed-strings -- "$1" "$HOME"; '
+                + 'elif command -v plocate >/dev/null; then plocate -i -l 30 -- "$1" | grep "^$HOME/"; '
+                + 'else echo "!missing"; fi', "files", q];
+            finder.running = true;
+        }
+    }
+
+    NProcess {
+        id: finder
+        quiet: true
+        property string wanted: ""
+        stdout: StdioCollector {
+            onStreamFinished: {
+                if (finder.wanted !== root.body(root.query).trim())
+                    return;
+                root.fileFor = finder.wanted;
+                root.fileHits = text.split("\n").filter(l => l !== "");
+            }
+        }
+    }
+
+    readonly property var calcFunctions: [
+        "abs", "acos", "acosh", "asin", "asinh", "atan", "atan2", "atanh", "bin",
+        "binomial", "cbrt", "ceil", "cos", "cosh", "dec", "exp", "factorial",
+        "floor", "frac", "gcd", "hex", "lcm", "ln", "log", "max", "min", "mod",
+        "oct", "pow", "rem", "root", "round", "sgn", "sin", "sinh", "sq", "sqrt",
+        "tan", "tanh", "trunc"
+    ]
+
+    // No denylist for bare words (save, load, function, ...): qalc's
+    // interactive-mode commands only exist when qalc is run with no
+    // expression argument. Given one on argv - which compute() below
+    // always does - every one of those words is just an undefined
+    // variable name to it, verified directly: `qalc -t "save x"`
+    // prints an expression result, not a write to disk, and feeding
+    // the same word on stdin alongside an argv expression is ignored
+    // entirely. A translated word list could never cover every qalc
+    // locale anyway; this has nothing to cover.
+    function calcSafe(expr: string): bool {
+        const text = String(expr ?? "");
+        if (text.length > 200 || /["'`;$\\:\u0000-\u001f\u007f\u200b-\u200f\u2060\ufeff]/.test(text))
+            return false;
+        const calls = text.match(/[A-Za-z_\u0080-\uffff][A-Za-z0-9_\u0080-\uffff]*\s*\(/g) ?? [];
+        for (const call of calls) {
+            if (root.calcFunctions.indexOf(call.replace(/\s*\($/, "")) < 0)
+                return false;
+        }
+        return true;
+    }
+
+    function compute(expr: string): void {
+        math.running = false;
+        root.mathResult = "";
+        root.mathRefused = false;
+        if (expr.trim() === "")
+            return;
+        if (!root.calcSafe(expr)) {
+            root.mathRefused = true;
+            return;
+        }
+        math.command = ["qalc", "-t", " " + expr];
+        math.running = true;
+    }
+
+    NProcess { id: runner }
+    function run(cmd: string): void {
+        runner.command = ["sh", "-c", cmd];
+        runner.running = true;
+    }
+
+    NProcess {
+        id: asker
+        property string payload: ""
+        onRunningChanged: {
+            if (running) {
+                write(payload);
+                stdinEnabled = false;
+            }
+        }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.askBusy = false;
+                if (root.body(root.query).trim() !== root.askFor)
+                    return;
+                try {
+                    const data = JSON.parse(text);
+                    root.askAnswer = (data.answer || "").trim() || "No answer";
+                } catch (e) {
+                    root.askAnswer = text.trim() || "Ask failed";
+                }
+            }
+        }
+        onExited: (code) => {
+            if (!root.askBusy)
+                return;
+            root.askBusy = false;
+            if (code !== 0 && root.askAnswer === "")
+                root.askAnswer = "Ask failed";
+        }
+    }
+
+    function askReady(q: string): bool {
+        return root.prefixOf(q) === "" && root.body(q).trim() !== "";
+    }
+
+    function askNow(q: string): void {
+        const text = root.body(q).trim();
+        if (text === "")
+            return;
+        root.askBusy = true;
+        root.askAnswer = "";
+        root.askFor = text;
+        asker.payload = text;
+        asker.running = false;
+        asker.command = Essentials.envBackend().concat(["python3", Essentials.script, "ask"]);
+        asker.stdinEnabled = true;
+        asker.running = true;
+    }
+
+    function clearAsk(): void {
+        asker.running = false;
+        root.askBusy = false;
+        root.askAnswer = "";
+        root.askFor = "";
+    }
+
+    function openCapture(id: string): void {
+        if ((id ?? "") === "")
+            return;
+        GlobalState.closeAll();
+        GlobalState.essentialFocus = id;
+        GlobalState.essentialOpen = true;
+    }
+
+    function openApp(id: string): void {
+        if ((id ?? "") === "")
+            return;
+        GlobalState.closeAll();
+        GlobalState.appsFocus = id;
+        GlobalState.appsOpen = true;
+    }
+
+    function matchApps(needle: string): var {
+        const parts = needle.trim().toLowerCase().split(/\s+/).filter(p => p !== "");
+        if (parts.length === 0)
+            return [];
+        const src = MiniApps.specs;
+        const hits = [];
+        for (let i = 0; i < src.length; i++) {
+            const spec = src[i];
+            const hay = [spec.name ?? "", spec.prompt ?? ""].join(" ").toLowerCase();
+            let ok = true;
+            for (let j = 0; j < parts.length; j++) {
+                if (!hay.includes(parts[j])) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok)
+                hits.push(spec);
+        }
+        return hits;
+    }
+
+    function openSetting(page: int, key: string): void {
+        GlobalState.closeAll();
+        GlobalState.settingsPage = page;
+        GlobalState.settingsFocus = key;
+        GlobalState.settingsOpen = true;
+    }
+
+    function captureIcon(kind: string): string {
+        switch (kind) {
+        case "snip": return "󰄀";
+        case "ocr": return "󰈚";
+        case "clip": return "󰅌";
+        case "record": return "󰑊";
+        case "voice": return "󰍬";
+        case "song": return "󰎈";
+        case "calc": return "󰃬";
+        default: return "󰠮";
+        }
+    }
+
+    // What a plain-text copy actually is, so the row can show a swatch or
+    // a link icon instead of the generic clipboard glyph - still copies
+    // on click either way, this only changes how the row reads.
+    function clipKind(preview: string, isImage: bool): var {
+        if (isImage)
+            return { hexColor: "", isUrl: false };
+        const trimmed = preview.trim();
+        const hexMatch = trimmed.match(/^#?([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/);
+        const hexColor = hexMatch
+            ? "#" + (hexMatch[1].length === 3
+                ? hexMatch[1].split("").map(c => c + c).join("")
+                : hexMatch[1])
+            : "";
+        const isUrl = !hexColor && /^https?:\/\/\S+$/i.test(trimmed);
+        return { hexColor: hexColor, isUrl: isUrl };
+    }
+
+    function captureHay(it: var): string {
+        const tags = it.tags ?? [];
+        return [
+            it.kind ?? "", it.title ?? "", it.summary ?? "",
+            it.text ?? "", tags.join(" "), it.when ?? ""
+        ].join(" ").toLowerCase();
+    }
+
+    function matchCaptures(needle: string): var {
+        const parts = needle.trim().toLowerCase().split(/\s+/).filter(p => p !== "");
+        if (parts.length === 0)
+            return [];
+        const src = Essentials.items;
+        const hits = [];
+        for (let i = 0; i < src.length; i++) {
+            const it = src[i];
+            const hay = root.captureHay(it);
+            let ok = true;
+            for (let j = 0; j < parts.length; j++) {
+                if (!hay.includes(parts[j])) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok)
+                hits.push(it);
+        }
+        const q = needle.toLowerCase();
+        hits.sort((a, b) => {
+            const at = (a.title || "").toLowerCase().includes(q) ? 0 : 1;
+            const bt = (b.title || "").toLowerCase().includes(q) ? 0 : 1;
+            return at - bt;
+        });
+        return hits;
+    }
+
+    // ── Shell actions ─────────────────────────────────────────────────
+    readonly property var actions: [
+        { name: "settings",   label: "Open settings",        icon: "󰒓",
+          run: () => GlobalState.settingsOpen = true },
+        // Widgets and the Glyph Matrix used to be a settings page, and
+        // seven search entries pointed at it. They point here now.
+        { name: "nothing", label: "Nothing Launcher", icon: "󰧵",
+          run: () => { GlobalState.closeAll(); GlobalState.launcherNothingOpen = true; } },
+        { name: "shortcuts", label: "Keyboard shortcuts", icon: "󰌌",
+          run: () => GlobalState.cheatsheetOpen = true },
+        { name: "essential", label: "Essential Space", icon: "󰠮",
+          run: () => { GlobalState.closeAll(); GlobalState.essentialOpen = true; } },
+        { name: "apps", label: "Essential Apps", icon: "󰀻",
+          run: () => { GlobalState.closeAll(); GlobalState.appsOpen = true; } },
+        { name: "game",        label: "Toggle game mode",        icon: "󰊴",
+          run: () => Game.toggle() },
+        { name: "crosshair",     label: "Toggle crosshair",        icon: "󰆤",
+          run: () => { Config.crosshair = !Config.crosshair; Config.save(); } },
+        { name: "screenshot",    label: "Capture a selection",      icon: "󰄀",
+          run: () => Shot.capture("region", "copy") },
+        { name: "ocr",        label: "OCR a selection",         icon: "󰈚",
+          run: () => Shot.capture("region", "ocr") },
+        { name: "record", label: "Record the screen",        icon: "󰑊",
+          run: () => Recorder.toggle("screen", false) },
+        { name: "dnd",    label: "Do not disturb",             icon: "󰂛",
+          run: () => Notifs.doNotDisturb = !Notifs.doNotDisturb },
+        { name: "notifications", label: "Clear notifications", icon: "󰩹",
+          run: () => Notifs.clearHistory() },
+        { name: "clipboard", label: "Clear the clipboard", icon: "󰅍",
+          run: () => Clipboard.wipe() },
+        // Power.lock() locks the shell directly rather than going through
+        // "loginctl lock-session" and hypridle.
+        { name: "lock", label: "Lock the session",     icon: "󰌾",
+          run: () => Power.lock() },
+        { name: "suspend",     label: "Suspend",            icon: "󰒲",
+          run: () => Power.suspend() },
+        { name: "session",    label: "Session menu",             icon: "󰐥",
+          run: () => GlobalState.sessionOpen = true },
+        { name: "reload",  label: "Restart the shell",         icon: "󰑐",
+          run: () => Power.restartShell() }
+    ]
+
+    // ── The Nothing side of the machine ───────────────────────────────
+    // The rice's own surfaces, plus any installed application that says
+    // Nothing or CMF. The scan is what keeps this list honest: install
+    // another Nothing tool tomorrow and it shows up here on its own,
+    // without this file being edited.
+    readonly property var nothingSurfaces: [
+        // vector, where Nothing has an icon of its own: see NothingIcons.
+        // The font glyph stays as the fallback for everything else.
+        { label: "Nothing Launcher", icon: "󰧵", vector: "nothingLauncher",
+          hint: "Widgets and the Glyph Matrix",
+          run: () => { GlobalState.closeAll(); GlobalState.launcherNothingOpen = true; } },
+        { label: "Control centre", icon: "󰕾", hint: "Panel under the bar",
+          run: () => { GlobalState.closeAll(); GlobalState.controlCenterOpen = true; } },
+        { label: "Essential Space", icon: "󰠮", vector: "essentialSpace",
+          hint: "Captures and notes",
+          run: () => { GlobalState.closeAll(); GlobalState.essentialOpen = true; } },
+        { label: "Essential Apps", icon: "󰀻", vector: "essentialApps",
+          hint: "Your mini apps",
+          run: () => { GlobalState.closeAll(); GlobalState.appsOpen = true; } },
+        { label: "Glyph settings", icon: "󰍹", hint: "Matrix and light effects",
+          run: () => GlobalState.settingsOpen = true },
+        { label: "Settings", icon: "󰒓", hint: "Every shell setting",
+          run: () => GlobalState.settingsOpen = true },
+        { label: "Shortcuts", icon: "󰌌", hint: "The whole keymap",
+          run: () => GlobalState.cheatsheetOpen = true }
+    ]
+
+    function nothingApps(): var {
+        const out = [];
+        const seen = {};
+        for (const e of (Apps.visible ?? [])) {
+            const blob = [
+                e?.name ?? "", e?.genericName ?? "", e?.comment ?? "",
+                (e?.keywords ?? []).join(" "), e?.id ?? ""
+            ].join(" ").toLowerCase();
+            if (!/\bnothing\b|\bcmf\b|ear-native/.test(blob))
+                continue;
+            const id = e?.id ?? "";
+            if (seen[id])
+                continue;
+            seen[id] = true;
+            out.push(e);
+        }
+        return out;
+    }
+
+    // ── Query parsing ─────────────────────────────────────────────────
+    function prefixOf(q: string): string {
+        for (const k of Object.keys(root.prefixes))
+            if (q.startsWith(root.prefixes[k])) return k;
+        return "";
+    }
+
+    function body(q: string): string {
+        const p = root.prefixOf(q);
+        return p === "" ? q : q.slice(root.prefixes[p].length);
+    }
+
+    // ── Building results ──────────────────────────────────────────────
+    // Each entry: { kind, title, subtitle, icon, appId, emoji, run }
+    readonly property var results: {
+        const q = root.query;
+        const mode = root.prefixOf(q);
+        const text = root.body(q).trim();
+        const out = [];
+
+        if (mode === "files") {
+            if (root.fileHits[0] === "!missing") {
+                out.push({ kind: "action", title: "Install fd for file search",
+                           subtitle: "sudo pacman -S fd", icon: "󰈞", run: () => {} });
+                return out;
+            }
+            const home = Quickshell.env("HOME") ?? "";
+            for (const path of root.fileHits) {
+                const clean = path.replace(/\/$/, "");
+                const dir = path.endsWith("/");
+                out.push({
+                    kind: "file", title: clean.split("/").pop(),
+                    subtitle: clean.startsWith(home) ? "~" + clean.slice(home.length) : clean,
+                    icon: dir ? "󰉋" : "󰈔",
+                    run: () => Quickshell.execDetached(["xdg-open", clean])
+                });
+            }
+            return out;
+        }
+
+        if (mode === "clip") {
+            const _ = Clipboard.stamp;
+            for (const it of Clipboard.search(text).slice(0, 30)) {
+                // The raw cliphist line ("[[ binary data 15 KiB png
+                // 555x393 ]]") is what used to sit as the row's title -
+                // fine next to a generic glyph, not next to the actual
+                // picture ClipThumb now draws there.
+                const dims = it.isImage
+                    ? it.preview.match(/binary data\s+([\d.]+\s*\w+)\s+(\w+)\s+(\d+x\d+)/i)
+                    : null;
+                const { hexColor, isUrl } = root.clipKind(it.preview, it.isImage);
+                out.push({
+                    kind: "clip",
+                    title: dims ? dims[3].replace("x", " × ") : it.preview,
+                    subtitle: dims ? `${dims[2].toUpperCase()} · ${dims[1]}`
+                        : (hexColor ? "Color" : (isUrl ? "Link" : (it.isImage ? "Image" : "Clipboard"))),
+                    icon: it.isImage ? "󰋩" : (isUrl ? "󰌷" : "󰅍"),
+                    clipId: it.id, isImage: it.isImage, hexColor: hexColor,
+                    run: () => Clipboard.copy(it.id, it.preview)
+                });
+            }
+            return out;
+        }
+
+        if (mode === "nothing") {
+            const needle = text.trim().toLowerCase();
+            const keep = (t) => needle === "" || t.toLowerCase().includes(needle);
+
+            // Real applications first: they are the ones you cannot reach
+            // any other way from here.
+            for (const e of root.nothingApps()) {
+                const name = e?.name ?? "";
+                if (!keep(name))
+                    continue;
+                out.push({
+                    kind: "app", title: name,
+                    subtitle: e?.genericName || e?.comment || "Application",
+                    iconName: e?.icon ?? "",
+                    appId: e?.id ?? "",
+                    run: () => e.execute()
+                });
+            }
+            for (const s of root.nothingSurfaces) {
+                if (!keep(s.label))
+                    continue;
+                out.push({
+                    kind: "action", title: s.label, subtitle: s.hint,
+                    icon: s.icon, vector: s.vector ?? "", run: s.run
+                });
+            }
+            return out;
+        }
+
+        if (mode === "emoji") {
+            const needle = text.toLowerCase();
+            const pool = needle === ""
+                ? root.emojis.slice(0, 60)
+                : root.emojis.filter(e => e.k.includes(needle)).slice(0, 60);
+            for (const e of pool) {
+                out.push({
+                    kind: "emoji", title: e.e,
+                    subtitle: e.k.split(" ").slice(0, 4).join(" "),
+                    emoji: e.e,
+                    run: () => Clipboard.setText(e.e)
+                });
+            }
+            return out;
+        }
+
+        // Captures and settings sit above apps: Essential Search is
+        // meant to find a note or a toggle before launching Firefox.
+        // Off, none of the three belong here at all - the setting's own
+        // hint promises a normal app launcher, not app results with
+        // Settings still mixed in.
+        if (mode === "" && text !== "" && Config.essentialSearch) {
+            const _ = Essentials.stamp;
+            const caps = root.matchCaptures(text).slice(0, 6);
+            for (const it of caps) {
+                const title = (it.title || it.summary || (it.text || "").slice(0, 60)
+                    || "Capture").toString();
+                const tags = (it.tags || []).join(" · ");
+                const sub = tags !== ""
+                    ? `${it.kind || "note"} · ${tags}`
+                    : (it.kind || "note");
+                const capId = it.id || "";
+                out.push({
+                    kind: "capture", title: title,
+                    subtitle: sub,
+                    icon: root.captureIcon(it.kind || "note"),
+                    run: () => root.openCapture(capId)
+                });
+            }
+            const _apps = MiniApps.stamp;
+            const mini = root.matchApps(text).slice(0, 4);
+            for (const spec of mini) {
+                const appId = spec.id || "";
+                // Not "app": the launcher routes that kind to AppIcon and
+                // a .desktop icon name, which a generated app does not have.
+                out.push({
+                    kind: "miniapp", title: spec.name || "App",
+                    subtitle: "Essential App",
+                    icon: spec.icon || "󰀻",
+                    run: () => root.openApp(appId)
+                });
+            }
+            const sets = SettingsIndex.search(text).slice(0, 5);
+            for (const e of sets) {
+                const page = e.page;
+                const key = e.key;
+                out.push({
+                    kind: "setting", title: e.label,
+                    subtitle: "Settings",
+                    icon: "󰒓",
+                    run: () => root.openSetting(page, key)
+                });
+            }
+        }
+
+        if (mode === "action" || text !== "") {
+            const needle = (mode === "action" ? text : q).toLowerCase();
+            for (const a of root.actions) {
+                if (needle !== ""
+                        && !a.name.includes(needle) && !a.label.toLowerCase().includes(needle))
+                    continue;
+                out.push({
+                    kind: "action", title: a.label,
+                    subtitle: root.prefixes.action + a.name,
+                    icon: a.icon, run: a.run
+                });
+            }
+            if (mode === "action") return out;
+        }
+
+        // Calculator, prioritised if explicitly requested
+        if (mode === "math" || (text !== "" && /^[\d\s().+\-*\/^%]+$/.test(text) && /[\d]/.test(text))) {
+            const shown = root.mathRefused ? "Not allowed in the calculator"
+                : (root.mathResult !== "" ? root.mathResult : "…");
+            const entry = {
+                kind: "math", title: shown, subtitle: text + " =",
+                icon: "󰪚",
+                run: () => {
+                    if (root.mathResult !== "")
+                        Clipboard.setText(root.mathResult);
+                }
+            };
+            if (mode === "math") out.unshift(entry); else out.push(entry);
+        }
+
+        if (mode === "shell" && text !== "") {
+            out.unshift({
+                kind: "shell", title: text, subtitle: "Run the command",
+                icon: "󰆍", run: () => root.run(`${text} &`)
+            });
+        }
+
+        if (mode === "web" && text !== "") {
+            out.unshift({
+                kind: "web", title: text, subtitle: "Search the web",
+                icon: "󰖟",
+                run: () => Quickshell.execDetached(["xdg-open", root.engine + encodeURIComponent(text)])
+            });
+        }
+
+        // Applications
+        if (mode === "" || mode === "app") {
+            const apps = Apps.search(text).slice(0, 40);
+            for (const e of apps) {
+                out.push({
+                    kind: "app", title: e.name,
+                    subtitle: e.genericName || e.comment || "",
+                    iconName: e.icon, entry: e,
+                    run: () => e.execute()
+                });
+            }
+        }
+
+        // Fallbacks when nothing matches
+        if (mode === "" && text !== "" && out.length === 0) {
+            out.push({
+                kind: "web", title: text, subtitle: "Search the web",
+                icon: "󰖟",
+                run: () => Quickshell.execDetached(["xdg-open", root.engine + encodeURIComponent(text)])
+            });
+            out.push({
+                kind: "shell", title: text, subtitle: "Run the command",
+                icon: "󰆍", run: () => root.run(`${text} &`)
+            });
+        }
+
+        return out;
+    }
+
+    // Calculator is async: restart on every useful keystroke.
+    onQueryChanged: {
+        const mode = root.prefixOf(query);
+        const text = root.body(query).trim();
+        if (mode === "math" || (/^[\d\s().+\-*\/^%]+$/.test(text) && /[\d]/.test(text)))
+            root.compute(text);
+        else
+            root.compute("");
+        if (text !== root.askFor)
+            root.askAnswer = "";
+        if (mode === "files")
+            fileDebounce.restart();
+    }
+
+    readonly property var hints: [
+        { p: ">", label: "applications" },
+        { p: ";", label: "clipboard" },
+        { p: ":", label: "emoji" },
+        { p: "=", label: "calculator" },
+        { p: "$", label: "command" },
+        { p: "?", label: "web" },
+        { p: "/", label: "actions" },
+        { p: "#", label: "nothing" },
+        { p: "~", label: "files" }
+    ]
+
+    // Label of the current mode, shown in the search bar.
+    function modeLabel(q: string): string {
+        switch (root.prefixOf(q)) {
+        case "clip":   return "Clipboard";
+        case "emoji":  return "Emoji";
+        case "math":   return "Calculator";
+        case "shell":  return "Command";
+        case "web":    return "Web";
+        case "action": return "Actions";
+        case "nothing": return "Nothing";
+        case "app":    return "Applications";
+        case "files":  return "Files";
+        default:       return "";
+        }
+    }
+}

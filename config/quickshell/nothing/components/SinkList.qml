@@ -1,0 +1,74 @@
+import QtQuick
+import QtQuick.Layouts
+import ".."
+import "../services"
+
+// List of detected audio sinks. A click sets the default sink.
+// With `inputs`, the same list for microphones and the default source.
+ColumnLayout {
+    id: root
+    property bool inputs: false
+    spacing: Theme.px(3)
+
+    Repeater {
+        model: root.inputs ? Audio.sources : Audio.sinks
+
+        Rectangle {
+            id: row
+            required property var modelData
+            readonly property bool current: root.inputs
+                ? Audio.isDefaultSource(modelData) : Audio.isDefault(modelData)
+
+            Layout.fillWidth: true
+            implicitHeight: Theme.px(30)
+            radius: Theme.r.tiny
+            color: row.current ? Theme.c.surface3
+                 : (ma.containsMouse ? Theme.c.surface3 : "transparent")
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Theme.px(8)
+                anchors.rightMargin: Theme.px(8)
+                spacing: Theme.px(8)
+
+                NIcon {
+                    text: root.inputs ? "󰍬" : Audio.glyphFor(row.modelData)
+                    size: Theme.z.iconM
+                    color: row.current ? Theme.c.on : Theme.c.onDim
+                    Layout.preferredWidth: Theme.px(16)
+                }
+
+                NText {
+                    Layout.fillWidth: true
+                    text: Audio.nameOf(row.modelData)
+                    elide: Text.ElideRight
+                }
+
+                Text {
+                    visible: row.current
+                    text: "ON"
+                    color: Theme.c.red
+                    font.family: Theme.f.mono
+                    font.pixelSize: Theme.f.micro
+                    font.letterSpacing: Theme.f.track
+                }
+            }
+
+            MouseArea {
+                id: ma
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.inputs ? Audio.setSource(row.modelData)
+                                     : Audio.setSink(row.modelData)
+            }
+        }
+    }
+
+    NText {
+        Layout.fillWidth: true
+        visible: Audio.sinks.length === 0
+        text: "No output detected"
+        color: Theme.c.onDim
+    }
+}

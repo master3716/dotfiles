@@ -1,0 +1,63 @@
+Third-party notices
+===================
+
+This rice is inspired by Nothing OS. It is unofficial and is not
+affiliated with, endorsed by, or connected to Nothing Technology Limited.
+
+Breeze icons
+  LGPL-3.0-or-later
+  https://invent.kde.org/frameworks/breeze-icons
+  Source glyphs for the file manager part of the Nothing icon theme
+  (folders, file types, toolbar). Converted locally at install time from
+  the installed `breeze-dark`; nothing is redistributed here.
+
+Qogir icon theme
+  GPL-3.0
+  https://github.com/vinceliuice/Qogir-icon-theme
+  Inherited by the Nothing icon theme for application icons, which this
+  rice does not theme.
+
+Nothing fonts (Ndot77, Inter)
+  Installed from the AUR package `ttf-nothing-font-git`.
+  Not bundled in this repository. See that package for its license.
+
+Quickshell
+  https://quickshell.outfoxxed.me/
+
+Hyprland
+  https://hypr.land/
+
+kitty-kitten-search (`config/kitty/search.py`)
+  GPLv3
+  https://github.com/trygveaa/kitty-kitten-search
+
+system24 and midnight-discord (`theme/vesktop/nothing.theme.css`)
+  MIT License
+  Copyright (c) 2025 refact0r
+  https://github.com/refact0r/system24 (7f5fb67937813bf3365198c4eae1d3011309cb45)
+  https://github.com/refact0r/midnight-discord (118bf0d32448c00790b2505a7df333290412a2e8)
+  Their built stylesheets are embedded in the Vesktop theme, minus the
+  remote requests, including the asciid font of system24.
+
+  Permission is hereby granted, free of charge, to any person obtaining a
+  copy of this software and associated documentation files (the
+  "Software"), to deal in the Software without restriction, including
+  without limitation the rights to use, copy, modify, merge, publish,
+  distribute, sublicense, and/or sell copies of the Software, and to permit
+  persons to whom the Software is furnished to do so, subject to the
+  following conditions:
+
+  The above copyright notice and this permission notice shall be included
+  in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+  OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+The install flow and many shortcuts follow
+[illogical-impulse](https://github.com/end-4/dots-hyprland)
+(end-4). The shell itself is a separate Quickshell config.

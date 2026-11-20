@@ -1,0 +1,153 @@
+hl.config({
+    general = {
+        -- Values from your configuration: larger gaps made windows
+        -- look noticeably smaller.
+        gaps_in    = 4,
+        gaps_out   = 5,
+        gaps_workspaces = 50,
+
+        border_size = 1,
+
+        col = {
+            -- Nothing red on the active window, deep black otherwise
+            active_border   = RED,
+            inactive_border = INACTIVE,
+        },
+
+        resize_on_border = true,
+        allow_tearing    = false,
+        layout           = "dwindle",
+
+        snap = {
+            enabled = true,
+            window_gap = 4,
+            monitor_gap = 5,
+            respect_gaps = true,
+        },
+
+        no_focus_fallback = true,
+    },
+
+    decoration = {
+        -- The same corner as the shell's panels (Theme.r.panel = 4). A
+        -- window rounded at 18 next to a control centre rounded at 4 is
+        -- two different design languages sharing a screen.
+        --
+        -- rounding_power back to 2: the squircle exponent is what makes a
+        -- large corner look drawn rather than cut, and at four pixels it
+        -- has nothing to shape, so it only smears the corner.
+        rounding       = 4,
+        rounding_power = 2.0,
+
+        active_opacity   = 1.0,
+        inactive_opacity = 0.94,
+
+        shadow = {
+            enabled      = true,
+            range        = 28,
+            render_power = 3,
+            color        = 0x66000000,
+            offset       = "0 6",
+        },
+
+        -- Nothing is matte: no frosted glass. A light blur only,
+        -- just enough to lift panels off the background.
+        blur = {
+            enabled           = true,
+            size              = 4,
+            passes            = 2,
+            noise             = 0.035,
+            contrast          = 0.9,
+            brightness        = 0.75,
+            vibrancy          = 0.0,
+            vibrancy_darkness = 0.0,
+            special           = false,
+            popups            = true,
+            popups_ignorealpha = 0.4,
+        },
+
+        -- The red halo on the active window: a nod to the Glyph.
+        glow = {
+            enabled        = true,
+            color          = 0x40d71921,
+            color_inactive = 0x00000000,
+            range          = 12,
+            render_power   = 2,
+        },
+    },
+
+    animations = {
+        enabled = true,
+    },
+
+    dwindle = {
+        preserve_split = true,
+        smart_split    = false,
+        smart_resizing = true,
+    },
+
+    master = {
+        new_status = "master",
+    },
+
+    misc = {
+        disable_hyprland_logo    = true,
+        disable_splash_rendering = true,
+        force_default_wallpaper  = 0,
+        focus_on_activate        = true,
+        -- Safety net: if a layer is missing, we see black,
+        -- not a light gray that clashes with everything else.
+        background_color         = "rgba(0b0b0bff)",
+        vrr                      = 1,
+    },
+
+    input = {
+        kb_layout    = kbLayout or "us",
+        -- Empty is the right value for "the layout's own default": fr is
+        -- AZERTY without asking, and passing nil here would leave whatever
+        -- a previous reload set.
+        kb_variant   = kbVariant or "",
+        follow_mouse = 1,
+        sensitivity  = 0,
+
+        touchpad = {
+            natural_scroll       = true,
+            disable_while_typing = true,
+            scroll_factor        = 0.5,
+        },
+    },
+
+    cursor = {
+        inactive_timeout  = 4,
+        hide_on_key_press = false,
+    },
+})
+
+hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })
+
+-- The layout chosen in Settings > Interface > Windows, written by the
+-- shell as the same hl.config call. It comes last so it wins over the
+-- layout = "dwindle" above, and the file simply does not exist until you
+-- have changed the setting once.
+--
+-- "scrolling" is Hyprland's own, built into the compositor since 0.54.
+-- It used to be the hyprscrolling hyprpm plugin; there is nothing to
+-- install any more.
+local function loadShellFile(name)
+    local path = (os.getenv("HOME") or "") .. "/.config/hypr/" .. name
+    local fh = io.open(path)
+    if not fh then return end
+    fh:close()
+    dofile(path)
+end
+
+loadShellFile("layout.lua")
+-- Mouse, touchpad and keyboard from Settings > Input. Absent until that
+-- page is first used; custom.lua is read after this and still wins.
+loadShellFile("input.lua")
+
+-- The window border, following the accent picked in the settings panel.
+-- Without this the frame Hyprland draws stays the red written above while
+-- everything inside it turns whatever colour you chose, which makes the
+-- compositor the one part of the desktop that does not follow.
+loadShellFile("accent.lua")

@@ -1,0 +1,332 @@
+-- Taken from your illogical-impulse configuration so it stays familiar,
+-- with targets pointed at this shell's panels.
+
+--## Applications
+hl.bind(mainMod .. " + Return",     hl.dsp.exec_cmd(terminal))
+hl.bind(mainMod .. " + T",          hl.dsp.exec_cmd(terminal))
+hl.bind("CTRL + ALT + T",           hl.dsp.exec_cmd(terminal))
+hl.bind(mainMod .. " + E",          hl.dsp.exec_cmd(fileManager))
+-- The browser chosen in Settings > Dock > Default apps, else the detected one.
+hl.bind(mainMod .. " + W",          hl.dsp.exec_cmd(ROOT .. "/scripts/open-default.sh web " .. browser))
+hl.bind(mainMod .. " + C",          hl.dsp.exec_cmd(codeEditor))
+hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(textEditor))
+hl.bind("CTRL + " .. mainMod .. " + V", hl.dsp.exec_cmd(volumeMixer))
+
+hl.bind(mainMod .. " + R",          ipc("launcher", "toggle"))
+hl.bind(mainMod .. " + Tab",        ipc("launcher", "toggle"))
+hl.bind(mainMod .. " + V",          ipc("clipboard", "toggle"))
+hl.bind(mainMod .. " + Period",     ipc("emoji", "toggle"))
+hl.bind(mainMod .. " + N",          ipc("bar", "toggle"))
+hl.bind(mainMod .. " + B",          ipc("notifications", "toggle"))
+hl.bind(mainMod .. " + I",          ipc("settings", "toggle"))
+hl.bind(mainMod .. " + A",          ipc("essential", "toggle"))
+hl.bind(mainMod .. " + ALT + A",    ipc("apps", "toggle"))
+hl.bind(mainMod .. " + G",          ipc("game", "toggle"))
+hl.bind(mainMod .. " + Slash",      ipc("cheatsheet", "toggle"))
+-- Which dot-matrix figure to draw, full-bleed, no trip through Settings.
+hl.bind(mainMod .. " + SHIFT + T",  ipc("wallpaperpicker", "toggle"))
+-- The next picture from the wallpaper folder.
+hl.bind(mainMod .. " + ALT + W",    ipc("wallpaper", "next"))
+-- The screens: arrangement, resolution, scale, rotation, and a map
+-- you can drag them around on.
+hl.bind(mainMod .. " + P",          ipc("displays", "toggle"))
+-- Night light on or off, whatever the schedule says; temperature and
+-- schedule live on the Light page of SUPER+P.
+hl.bind(mainMod .. " + ALT + B",    ipc("nightlight", "toggle"))
+-- Keep the screen awake (no dim, lock, screen-off or suspend) until
+-- pressed again; the bar shows a cup while it holds.
+hl.bind(mainMod .. " + ALT + I",    ipc("caffeine", "toggle"))
+-- What is using the machine, and closing what stopped answering.
+hl.bind("CTRL + SHIFT + Escape",    ipc("settings", "processes"))
+hl.bind(mainMod .. " + ALT + G",    ipc("game", "mode"))
+-- Walks off, Matrix, Bar, Strip. The surface that comes up plays its own
+-- notification rhythm, so you can see where you landed without looking.
+hl.bind(mainMod .. " + SHIFT + G",  ipc("glyph", "next"))
+hl.bind(mainMod .. " + ALT + L",    ipc("nothing", "toggle"))
+hl.bind(mainMod .. " + ALT + X",    ipc("game", "crosshair"))
+hl.bind("CTRL + ALT + Delete",      ipc("session", "toggle"))
+hl.bind(mainMod .. " + Escape",     ipc("session", "toggle"))
+-- The shell reloads itself. A "pkill -f 'qs -p <dir>'" followed by a
+-- restart cannot work: the pattern also matches the sh that holds the
+-- command, which is killed before it can relaunch anything.
+hl.bind("CTRL + " .. mainMod .. " + R", ipc("shell", "reload"))
+
+--## Session
+-- Through the wrapper, which asks the shell to lock: it is what
+-- session action the lock screen armed, once the password is accepted.
+hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(ROOT .. "/scripts/lock.sh"))
+hl.bind(mainMod .. " + SHIFT + L",  hl.dsp.exec_cmd("systemctl suspend || loginctl suspend"))
+hl.bind("CTRL + SHIFT + ALT + " .. mainMod .. " + Delete",
+    hl.dsp.exec_cmd("systemctl poweroff || loginctl poweroff"))
+
+--## Windows
+hl.bind(mainMod .. " + Q",          hl.dsp.window.close())
+hl.bind(mainMod .. " + SHIFT + ALT + Q", hl.dsp.exec_cmd("hyprctl kill"))
+hl.bind(mainMod .. " + D",          hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
+hl.bind(mainMod .. " + SHIFT + F",  hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
+hl.bind(mainMod .. " + F",          hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
+hl.bind(mainMod .. " + ALT + F",    hl.dsp.window.fullscreen_state({ internal = 0, client = 3, action = "toggle" }))
+hl.bind(mainMod .. " + ALT + Space", hl.dsp.window.float({ action = "toggle" }))
+-- Pin moved off SUPER+P: that combination belongs to the screens, as
+-- it does on every other desktop. Not SUPER+ALT+P either, which
+-- hypr/passthrough.lua claims for the nested session.
+hl.bind(mainMod .. " + SHIFT + ALT + P", hl.dsp.window.pin())
+--# Layout, in whichever layout you are in
+--
+-- The same three keys mean the same three things in both layouts, which
+-- is the point: switching to scrolling should not cost you the shortcuts
+-- you already have in your fingers. The message is chosen at press time
+-- rather than bound twice, because dwindle and scrolling do not answer to
+-- the same names and a bind that fires into the wrong layout does nothing
+-- and says nothing.
+local function scrollingNow()
+    return hl.get_config("general:layout") == "scrolling"
+end
+
+-- Wider and narrower. splitratio moves the split this window sits on;
+-- colresize moves the width of its column.
+local function ratio(delta)
+    return function()
+        local d = (delta > 0 and "+" or "") .. delta
+        hl.dispatch(hl.dsp.layout(
+            scrollingNow() and ("colresize " .. d) or ("splitratio " .. d)))
+    end
+end
+
+-- Comma and Semicolon, not Apostrophe and Semicolon.
+--
+-- On AZERTY the apostrophe is keycode 13, which is the "4" key. SUPER +
+-- code:13 is already workspace 4 and SUPER + ALT + code:13 already sends
+-- a window there, so a bind on the apostrophe keysym fires on the same
+-- press as those and the result is whichever Hyprland reaches first.
+-- Colon is no better: custom.lua puts the shortcut sheet on it. Checked
+-- with `xkbcli how-to-type --layout fr` and against `hyprctl binds`.
+--
+-- The layout is detected now rather than hardcoded, so a bind here has to
+-- survive both. Comma and semicolon do: keycodes 58 and 59, unmodified
+-- and unclaimed on AZERTY, unmodified and unclaimed on QWERTY. On AZERTY
+-- they are also side by side, left one narrower and right one wider,
+-- which is the way they read on the keyboard.
+hl.bind(mainMod .. " + Comma",     ratio(-0.1), { repeating = true })
+hl.bind(mainMod .. " + Semicolon", ratio(0.1),  { repeating = true })
+
+-- Rearrange this window. togglesplit turns the split; promote pulls the
+-- window out into a column of its own, which is the nearest thing
+-- scrolling has to "put this somewhere else".
+hl.bind(mainMod .. " + J", function()
+    hl.dispatch(hl.dsp.layout(scrollingNow() and "promote" or "togglesplit"))
+end)
+
+--# Scrolling only
+--
+-- Bound whichever layout is on: dwindle ignores a message it does not
+-- know, and binds that appear and disappear with a setting are worse than
+-- binds that quietly do nothing.
+--
+-- ALT with the arrows moves along the tape, SHIFT+ALT carries the column
+-- with you. Everything here is one hand on SUPER+ALT.
+hl.bind(mainMod .. " + ALT + Left",  hl.dsp.layout("move -col"), { repeating = true })
+hl.bind(mainMod .. " + ALT + Right", hl.dsp.layout("move +col"), { repeating = true })
+hl.bind(mainMod .. " + SHIFT + ALT + Left",  hl.dsp.layout("swapcol l"))
+hl.bind(mainMod .. " + SHIFT + ALT + Right", hl.dsp.layout("swapcol r"))
+
+-- Up takes the window out into its own column, Down folds it into the one
+-- before it. Stacking and unstacking, in the direction you would expect.
+hl.bind(mainMod .. " + ALT + Up",   hl.dsp.layout("expel"))
+hl.bind(mainMod .. " + ALT + Down", hl.dsp.layout("consume"))
+
+hl.bind(mainMod .. " + ALT + C",      hl.dsp.layout("center"))
+
+-- Full width, not "fit expand". Expand only takes the free space left on
+-- the monitor, and with fullscreen_on_one_column on there is almost never
+-- any: the key did nothing nearly every time it was pressed. colresize 1.0
+-- sets the column to the whole screen, which is what you actually want
+-- from a maximise. SUPER + Comma brings it back down.
+hl.bind(mainMod .. " + ALT + Return", hl.dsp.layout("colresize 1.0"))
+
+hl.bind(mainMod .. " + mouse:272",  hl.dsp.window.drag(),   { mouse = true })
+hl.bind(mainMod .. " + mouse:274",  hl.dsp.window.drag(),   { mouse = true })
+hl.bind(mainMod .. " + mouse:273",  hl.dsp.window.resize(), { mouse = true })
+
+-- Alt+F4: reminder rather than a surprise close
+hl.bind("ALT + F4", hl.dsp.exec_cmd(
+    "notify-send 'Wrong shortcut' 'Use SUPER+Q to close' -a Hyprland"),
+    { non_consuming = true })
+
+--# Directional focus and move
+local arrows = { Left = "l", Right = "r", Up = "u", Down = "d" }
+for key, dir in pairs(arrows) do
+    hl.bind(mainMod .. " + " .. key,         hl.dsp.focus({ direction = dir }))
+    hl.bind(mainMod .. " + SHIFT + " .. key, hl.dsp.window.move({ direction = dir }))
+end
+hl.bind(mainMod .. " + BracketLeft",  hl.dsp.focus({ direction = "l" }))
+hl.bind(mainMod .. " + BracketRight", hl.dsp.focus({ direction = "r" }))
+
+--## Workspaces
+-- Raw keycodes: on an AZERTY keyboard the top row does not produce
+-- digits, so key names like "1" would never fire.
+--# Switching workspace from the special workspace
+-- A special workspace stays displayed over the normal one: switching
+-- without closing it does change the workspace underneath, but you see nothing.
+-- Close it first.
+local function closeSpecial()
+    local sp = hl.get_active_special_workspace()
+    if sp then
+        -- gsub returns (string, count); the extra parens drop count so
+        -- toggle_special gets one argument, not two.
+        hl.dispatch(hl.dsp.workspace.toggle_special((sp.name:gsub("^special:", ""))))
+    end
+end
+
+-- Workspaces stay on the monitor they live on. SUPER+<N> and the bar
+-- just focus the workspace where it is (Hyprland's default). Relative
+-- steps (CTRL+SUPER+Left/Right, Page_Up/Down, scroll) never cross to a
+-- workspace that lives on the other monitor: they do nothing instead.
+-- get_workspace() resolves "r-1"/"-1"/"+1" to the same concrete
+-- workspace Hyprland itself would switch to (confirmed live).
+local function focusWorkspace(target)
+    local ws = hl.get_workspace(target)
+    if ws and ws.monitor and ws.monitor.id ~= hl.get_active_monitor().id
+        and type(target) ~= "number" then
+        return
+    end
+    -- Focus the resolved id, not "r-1" again: a second resolve could differ.
+    hl.dispatch(hl.dsp.focus({ workspace = ws and ws.id or target }))
+end
+
+-- Exposed as a global: the shell calls it via
+-- Hyprland.dispatch("gotoWorkspaceSafe(3)"). A dispatch expects an
+-- expression that yields a dispatcher, hence the trailing no_op.
+function gotoWorkspaceSafe(target)
+    closeSpecial()
+    focusWorkspace(target)
+    return hl.dsp.no_op()
+end
+
+local function goWorkspace(target)
+    return function()
+        closeSpecial()
+        focusWorkspace(target)
+    end
+end
+
+-- To move, send the window first: the special workspace empties and
+-- Hyprland closes it on its own.
+local function sendToWorkspace(target)
+    return function()
+        hl.dispatch(hl.dsp.window.move({ workspace = target, follow = false }))
+    end
+end
+
+for i = 1, 10 do
+    local code = 9 + i          -- code:10 = key "1" ... code:19 = "0"
+    hl.bind(mainMod .. " + code:" .. code,       goWorkspace(i))
+    hl.bind(mainMod .. " + ALT + code:" .. code, sendToWorkspace(i))
+end
+
+local numpad = { 87, 88, 89, 83, 84, 85, 79, 80, 81, 90 }
+for i = 1, 10 do
+    hl.bind(mainMod .. " + code:" .. numpad[i],       goWorkspace(i))
+    hl.bind(mainMod .. " + ALT + code:" .. numpad[i], sendToWorkspace(i))
+end
+
+--# Relative navigation
+hl.bind("CTRL + " .. mainMod .. " + Left",  goWorkspace("r-1"))
+hl.bind("CTRL + " .. mainMod .. " + Right", goWorkspace("r+1"))
+hl.bind(mainMod .. " + Page_Up",            goWorkspace("r-1"))
+hl.bind(mainMod .. " + Page_Down",          goWorkspace("r+1"))
+hl.bind(mainMod .. " + mouse_up",           goWorkspace("-1"))
+hl.bind(mainMod .. " + mouse_down",         goWorkspace("+1"))
+hl.bind(mainMod .. " + SHIFT + Page_Up",    sendToWorkspace("r-1"))
+hl.bind(mainMod .. " + SHIFT + Page_Down",  sendToWorkspace("r+1"))
+
+--# Send the current workspace to another monitor
+-- Takes your workspace with you rather than sending a window off alone
+-- (that's SHIFT+Page_Up/Down above): focus follows to the destination
+-- monitor, confirmed live - there would be nothing useful left to look
+-- at on the monitor you just emptied. A no-op on a single monitor.
+local function sendWorkspaceToMonitor(step)
+    return function()
+        local mons = hl.get_monitors()
+        if #mons < 2 then return end
+        local cur = hl.get_active_monitor()
+        local idx = 1
+        for i, m in ipairs(mons) do
+            if m.id == cur.id then
+                idx = i
+                break
+            end
+        end
+        local target = mons[((idx - 1 + step) % #mons) + 1]
+        local ws = hl.get_active_workspace()
+        hl.dispatch(hl.dsp.workspace.move({ workspace = ws.id, monitor = target }))
+    end
+end
+
+hl.bind("CTRL + SHIFT + " .. mainMod .. " + Left",  sendWorkspaceToMonitor(-1))
+hl.bind("CTRL + SHIFT + " .. mainMod .. " + Right", sendWorkspaceToMonitor(1))
+
+--# Scratchpad
+hl.bind(mainMod .. " + S",       hl.dsp.workspace.toggle_special("special"))
+hl.bind(mainMod .. " + ALT + S", hl.dsp.window.move({ workspace = "special:special", follow = false }))
+
+--## Utilities
+hl.bind(mainMod .. " + SHIFT + S", ipc("screenshot", "region"))
+hl.bind("CTRL + SHIFT + S",        ipc("screenshot", "region"))
+hl.bind(mainMod .. " + SHIFT + X", ipc("screenshot", "ocr"))
+hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd("hyprpicker -a"))
+hl.bind(mainMod .. " + SHIFT + A", ipc("lens", "search"))
+hl.bind(mainMod .. " + ALT + N",   ipc("song", "toggle"))
+hl.bind(mainMod .. " + SHIFT + R", ipc("record", "region"))
+hl.bind("CTRL + ALT + R",          ipc("record", "toggle"))
+hl.bind(mainMod .. " + SHIFT + ALT + R", ipc("record", "sound"))
+hl.bind("Print",                   ipc("screenshot", "screen"))
+hl.bind("CTRL + Print",            ipc("screenshot", "save"))
+
+--# Zoom
+local function zoom(delta)
+    local v = hl.get_config("cursor:zoom_factor") + delta
+    hl.config({ cursor = { zoom_factor = math.max(1.0, math.min(3.0, v)) } })
+end
+hl.bind(mainMod .. " + Minus",   function() zoom(-0.3) end, { repeating = true })
+hl.bind(mainMod .. " + Equal",   function() zoom(0.3) end,  { repeating = true })
+hl.bind(mainMod .. " + code:82", function() zoom(-0.3) end, { repeating = true })
+hl.bind(mainMod .. " + code:86", function() zoom(0.3) end,  { repeating = true })
+
+--## Media
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 2%+"),
+    { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-"),
+    { locked = true, repeating = true })
+hl.bind("XF86AudioMute",    hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),   { locked = true })
+hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
+hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),   { locked = true })
+hl.bind(mainMod .. " + ALT + M",   hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
+
+hl.bind("XF86MonBrightnessUp",   hl.dsp.global("quickshell:brightnessUp"),
+    { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.global("quickshell:brightnessDown"),
+    { locked = true, repeating = true })
+
+-- Keyboard backlight. Generic: the shell drives whatever device exposes
+-- kbd_backlight, so this keeps working past the machine it was written on.
+hl.bind("XF86KbdBrightnessUp",   hl.dsp.global("quickshell:kbdBrightnessUp"),
+    { locked = true, repeating = true })
+hl.bind("XF86KbdBrightnessDown", hl.dsp.global("quickshell:kbdBrightnessDown"),
+    { locked = true, repeating = true })
+hl.bind("XF86KbdLightOnOff",     hl.dsp.global("quickshell:kbdBrightnessUp"),
+    { locked = true })
+
+hl.bind("XF86AudioPlay",  hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
+hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
+hl.bind("XF86AudioNext",  hl.dsp.exec_cmd("playerctl next"),       { locked = true })
+hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
+hl.bind(mainMod .. " + SHIFT + P", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
+hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd("playerctl next"),       { locked = true })
+hl.bind(mainMod .. " + SHIFT + B", hl.dsp.exec_cmd("playerctl previous"),   { locked = true })
+
+-- SUPER press-release alone: opens the launcher. release=true is what
+-- actually restricts this to a lone tap - without it (0.57 regression)
+-- it also fires on every SUPER + <other key> combo.
+hl.bind(mainMod .. " + SUPER_L", hl.dsp.global("quickshell:launcherToggle"), { release = true })
+hl.bind(mainMod .. " + SUPER_R", hl.dsp.global("quickshell:launcherToggle"), { release = true })

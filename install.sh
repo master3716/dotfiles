@@ -508,33 +508,194 @@ set_default_shell() {
 }
 
 # ------------------------------------------------------------------------------
+# 7. Nought (Nothing OS) Rice & Theme Integration
+# ------------------------------------------------------------------------------
+deploy_nought() {
+    log_info "Deploying Nought (Nothing OS) Rice & Theme..."
+
+    local CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+    local BACKUP_ENV="${CONF}/nought-theme-backup.env"
+
+    # Backup current GNOME / OS theme settings before changing them
+    if [ ! -f "$BACKUP_ENV" ]; then
+        mkdir -p "$CONF"
+        cat <<EOF > "$BACKUP_ENV"
+SAVED_COLOR_SCHEME=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || echo "'prefer-dark'")
+SAVED_GTK_THEME=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null || echo "'Adwaita'")
+SAVED_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null || echo "'Adwaita'")
+SAVED_FONT_NAME=$(gsettings get org.gnome.desktop.interface font-name 2>/dev/null || echo "'Adwaita Sans 11'")
+SAVED_ACCENT_COLOR=$(gsettings get org.gnome.desktop.interface accent-color 2>/dev/null || echo "''")
+EOF
+        log_info "Saved current theme settings to ${BACKUP_ENV}"
+    fi
+
+    # OS Theme Decisions (Rule: Stick with repo's version for OS theme)
+    log_info "Applying Nothing OS theme (GTK, Qt/KDE, Icons, Fonts)..."
+
+    # GTK 3 & GTK 4
+    mkdir -p "${CONF}/gtk-3.0" "${CONF}/gtk-4.0"
+    link_file "${DOTFILES_DIR}/config/gtk-3.0/settings.ini" "${CONF}/gtk-3.0/settings.ini"
+    link_file "${DOTFILES_DIR}/config/gtk-3.0/gtk.css" "${CONF}/gtk-3.0/gtk.css"
+    link_file "${DOTFILES_DIR}/config/gtk-4.0/settings.ini" "${CONF}/gtk-4.0/settings.ini"
+    link_file "${DOTFILES_DIR}/config/gtk-4.0/gtk.css" "${CONF}/gtk-4.0/gtk.css"
+
+    # Qt / KDE (Dolphin, etc.)
+    mkdir -p "${DATA}/color-schemes"
+    link_file "${DOTFILES_DIR}/config/theme/kde/color-schemes/Nothing.colors" "${DATA}/color-schemes/Nothing.colors"
+    link_file "${DOTFILES_DIR}/config/theme/kde/kdeglobals" "${CONF}/kdeglobals"
+    link_file "${DOTFILES_DIR}/config/theme/kde/darklyrc" "${CONF}/darklyrc"
+
+    # Nothing Icon Theme
+    mkdir -p "${DATA}/icons/Nothing"
+    link_file "${DOTFILES_DIR}/config/theme/icons/Nothing/index.theme" "${DATA}/icons/Nothing/index.theme"
+    if [ -f "${DOTFILES_DIR}/config/scripts/build-nothing-icons.py" ]; then
+        if python3 -c "import numpy, PIL" 2>/dev/null; then
+            log_info "Building Nothing icon theme..."
+            python3 "${DOTFILES_DIR}/config/scripts/build-nothing-icons.py" "${DATA}/icons/Nothing" 2>/dev/null || true
+        else
+            log_warn "Python numpy/pillow not installed; skipping full icon generation."
+        fi
+    fi
+    has_cmd gtk-update-icon-cache && gtk-update-icon-cache -f "${DATA}/icons/hicolor" 2>/dev/null || true
+
+    # Desktop Portals
+    mkdir -p "${CONF}/xdg-desktop-portal"
+    link_file "${DOTFILES_DIR}/config/theme/xdg-desktop-portal/hyprland-portals.conf" "${CONF}/xdg-desktop-portal/hyprland-portals.conf"
+    link_file "${DOTFILES_DIR}/config/theme/xdg-desktop-portal/portals.conf" "${CONF}/xdg-desktop-portal/portals.conf"
+
+    # Fontconfig
+    link_file "${DOTFILES_DIR}/config/fontconfig" "${CONF}/fontconfig"
+    has_cmd fc-cache && fc-cache -f "${CONF}/fontconfig" 2>/dev/null || true
+
+    # GNOME Theme via gsettings
+    if has_cmd gsettings; then
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface icon-theme 'Nothing' 2>/dev/null || true
+        gsettings set org.gnome.desktop.interface font-name 'Inter Variable 10' 2>/dev/null || true
+    fi
+
+    # Nought Desktop & Compositor Configs
+    log_info "Deploying Hyprland and Quickshell configs..."
+    link_file "${DOTFILES_DIR}/config/hypr" "${CONF}/hypr"
+    mkdir -p "${CONF}/quickshell"
+    link_file "${DOTFILES_DIR}/config/quickshell/nothing" "${CONF}/quickshell/nothing"
+    link_file "${DOTFILES_DIR}/config/scripts" "${CONF}/scripts"
+    link_file "${DOTFILES_DIR}/config/theme" "${CONF}/theme"
+    link_file "${DOTFILES_DIR}/config/fastfetch" "${CONF}/fastfetch"
+    link_file "${DOTFILES_DIR}/config/kitty" "${CONF}/kitty"
+    link_file "${DOTFILES_DIR}/config/starship.toml" "${CONF}/starship.toml"
+    mkdir -p "${CONF}/fish/conf.d"
+    link_file "${DOTFILES_DIR}/config/fish/conf.d/nothing.fish" "${CONF}/fish/conf.d/nothing.fish"
+
+    # Applications and Icons
+    mkdir -p "${DATA}/applications" "${DATA}/icons/hicolor/scalable/apps" "${DATA}/kio/servicemenus"
+    link_file "${DOTFILES_DIR}/applications/nothing-x.desktop" "${DATA}/applications/nothing-x.desktop"
+    link_file "${DOTFILES_DIR}/icons/hicolor/scalable/apps/nothing-x.svg" "${DATA}/icons/hicolor/scalable/apps/nothing-x.svg"
+    link_file "${DOTFILES_DIR}/applications/servicemenus/nothing-wallpaper.desktop" "${DATA}/kio/servicemenus/nothing-wallpaper.desktop"
+
+    has_cmd update-desktop-database && update-desktop-database "${DATA}/applications" 2>/dev/null || true
+
+    log_success "Nought (Nothing OS) Rice & Theme deployed successfully!"
+    log_info "To revert at any time, run: ./revert-nought.sh (or ./install.sh --revert-nought)"
+}
+
+revert_nought() {
+    if [ -f "${DOTFILES_DIR}/revert-nought.sh" ]; then
+        bash "${DOTFILES_DIR}/revert-nought.sh"
+    else
+        log_error "revert-nought.sh not found."
+    fi
+}
+
+show_help() {
+    cat <<'EOF'
+Usage: ./install.sh [OPTION]
+
+Dotfiles installer with multi-distro and Nought (Nothing OS) rice support.
+
+Options:
+  -h, --help            Show this help message
+  -n, --nought          Deploy Nought (Nothing OS) desktop rice and theme
+      --revert-nought   Revert Nought theme and configs back to original state
+  -a, --all             Run full dotfiles installation and deploy Nought rice
+      --revert          Alias for --revert-nought
+
+Without options, installs core dotfiles, shell, fonts, and terminal tools.
+EOF
+}
+
+# ------------------------------------------------------------------------------
 # Main
 # ------------------------------------------------------------------------------
 main() {
-    printf "\n%b========================================%b\n" "${BOLD}" "${NC}"
-    printf "%b   Installing Dotfiles & Shell Setup    %b\n" "${BOLD}" "${NC}"
-    printf "%b========================================%b\n\n" "${BOLD}" "${NC}"
+    local RUN_NOUGHT=false
+    local RUN_REVERT_NOUGHT=false
+    local RUN_CORE=true
 
-    # Step 1: Deploy configs first so your settings are immediately staged
-    deploy_configs
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            -n|--nought)
+                RUN_NOUGHT=true
+                RUN_CORE=false
+                shift
+                ;;
+            --revert-nought|--revert)
+                RUN_REVERT_NOUGHT=true
+                RUN_CORE=false
+                shift
+                ;;
+            -a|--all)
+                RUN_CORE=true
+                RUN_NOUGHT=true
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
 
-    # Step 2: Install Oh My Zsh + Powerlevel10k + plugins
-    install_zsh_ecosystem
+    if [ "$RUN_REVERT_NOUGHT" = true ]; then
+        revert_nought
+        exit 0
+    fi
 
-    # Step 3: Install MesloLGS NF fonts (for Powerlevel10k & icon glyphs)
-    install_meslo_font
+    if [ "$RUN_CORE" = true ]; then
+        printf "\n%b========================================%b\n" "${BOLD}" "${NC}"
+        printf "%b   Installing Dotfiles & Shell Setup    %b\n" "${BOLD}" "${NC}"
+        printf "%b========================================%b\n\n" "${BOLD}" "${NC}"
 
-    # Step 4: Install core system packages
-    install_system_packages
+        # Step 1: Deploy configs first so your settings are immediately staged
+        deploy_configs
 
-    # Step 5: Install modern CLI utilities (eza, zellij, lazygit, neovim, etc.)
-    install_modern_tools
+        # Step 2: Install Oh My Zsh + Powerlevel10k + plugins
+        install_zsh_ecosystem
 
-    # Step 6: Install Ghostty terminal emulator
-    install_ghostty
+        # Step 3: Install MesloLGS NF fonts (for Powerlevel10k & icon glyphs)
+        install_meslo_font
 
-    # Step 7: Switch shell to Zsh
-    set_default_shell
+        # Step 4: Install core system packages
+        install_system_packages
+
+        # Step 5: Install modern CLI utilities (eza, zellij, lazygit, neovim, etc.)
+        install_modern_tools
+
+        # Step 6: Install Ghostty terminal emulator
+        install_ghostty
+
+        # Step 7: Switch shell to Zsh
+        set_default_shell
+    fi
+
+    if [ "$RUN_NOUGHT" = true ]; then
+        deploy_nought
+    fi
 
     printf "\n%b========================================%b\n" "${GREEN}${BOLD}" "${NC}"
     printf "%bSetup completed successfully!%b\n" "${GREEN}${BOLD}" "${NC}"
@@ -543,6 +704,10 @@ main() {
     printf "(In your terminal emulator settings, select font: %bMesloLGS NF%b)\n\n" "${BOLD}" "${NC}"
     printf "To start using your new environment right now, run:\n"
     printf "  %bexec zsh%b\n\n" "${BOLD}" "${NC}"
+    if [ "$RUN_NOUGHT" = false ]; then
+        printf "%bTip:%b To deploy the Nothing OS rice and theme, run: %b./install.sh --nought%b\n" "${YELLOW}" "${NC}" "${BOLD}" "${NC}"
+        printf "     To revert at any time, run: %b./revert-nought.sh%b\n\n" "${BOLD}" "${NC}"
+    fi
 }
 
 main "$@"
