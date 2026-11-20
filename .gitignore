@@ -12,3 +12,9 @@ Thumbs.db
 # Local history & temp files
 *.tmp
 *.log
+*.orig
+__pycache__/
+
+# Quickshell runtime generated configs
+accent.lua
+layout.lua
