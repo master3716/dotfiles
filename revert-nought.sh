@@ -86,7 +86,7 @@ log_info "Removing Nothing icons and desktop entries..."
 rm -rf "${DATA}/icons/Nothing"
 rm -f "${DATA}/applications/nothing-x.desktop"
 rm -f "${DATA}/icons/hicolor/scalable/apps/nothing-x.svg"
-rm -f "${DATA}/kio/servicemenus/nothing-wallpaper.desktop"
+rm -f "${DATA}/kio/servicemenus/nothing-set-wallpaper.desktop"
 
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -f "${DATA}/icons/hicolor" 2>/dev/null || true
@@ -108,6 +108,7 @@ fi
 log_info "Removing Nought Hyprland, Quickshell, scripts, and theme copies..."
 restore_backup "${CONF}/hypr"
 restore_backup "${CONF}/quickshell/nothing"
+rmdir "${CONF}/quickshell" 2>/dev/null || true
 restore_backup "${CONF}/scripts"
 restore_backup "${CONF}/theme"
 restore_backup "${CONF}/fastfetch"

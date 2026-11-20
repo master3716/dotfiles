@@ -593,7 +593,7 @@ EOF
     mkdir -p "${DATA}/applications" "${DATA}/icons/hicolor/scalable/apps" "${DATA}/kio/servicemenus"
     link_file "${DOTFILES_DIR}/applications/nothing-x.desktop" "${DATA}/applications/nothing-x.desktop"
     link_file "${DOTFILES_DIR}/icons/hicolor/scalable/apps/nothing-x.svg" "${DATA}/icons/hicolor/scalable/apps/nothing-x.svg"
-    link_file "${DOTFILES_DIR}/applications/servicemenus/nothing-wallpaper.desktop" "${DATA}/kio/servicemenus/nothing-wallpaper.desktop"
+    link_file "${DOTFILES_DIR}/applications/servicemenus/nothing-set-wallpaper.desktop" "${DATA}/kio/servicemenus/nothing-set-wallpaper.desktop"
 
     has_cmd update-desktop-database && update-desktop-database "${DATA}/applications" 2>/dev/null || true
 
