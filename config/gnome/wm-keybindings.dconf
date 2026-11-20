@@ -1,0 +1,5 @@
+[/]
+switch-input-source=['<Shift>Alt_L', '<Alt>Shift_L', '<Shift>Alt_R', '<Alt>Shift_R', '<Super>space']
+switch-input-source-backward=['<Alt>Shift_L', '<Shift>Alt_L', '<Alt>Shift_R', '<Shift>Alt_R', '<Shift><Super>space']
+switch-to-workspace-left=['<Control><Super>Left']
+switch-to-workspace-right=['<Control><Super>Right']

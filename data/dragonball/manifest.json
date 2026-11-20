@@ -1,0 +1,810 @@
+[
+  {
+    "name": "Bulma",
+    "original_name": "Bulma",
+    "slug": "bulma",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/bulma.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/bulma.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Frieza",
+    "original_name": "Freezer",
+    "slug": "freezer",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/freezer.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/freezer.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Piccolo",
+    "original_name": "Piccolo",
+    "slug": "piccolo",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/piccolo.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/piccolo.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Gohan",
+    "original_name": "Gohan",
+    "slug": "gohan",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gohan.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gohan.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Zarbon",
+    "original_name": "Zarbon",
+    "slug": "zarbon",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/zarbon.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/zarbon.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Ginyu",
+    "original_name": "Ginyu",
+    "slug": "ginyu",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/ginyu.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/ginyu.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Dodoria",
+    "original_name": "Dodoria",
+    "slug": "dodoria",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/dodoria.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/dodoria.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Cell",
+    "original_name": "Celula",
+    "slug": "celula",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/celula.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/celula.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Vegeta",
+    "original_name": "Vegeta",
+    "slug": "vegeta",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegeta.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegeta.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Goku",
+    "original_name": "Goku",
+    "slug": "goku",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/goku.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/goku.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Krillin",
+    "original_name": "Krillin",
+    "slug": "krillin",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/krillin.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/krillin.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Tien Shinhan",
+    "original_name": "Tenshinhan",
+    "slug": "tenshinhan",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/tenshinhan.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/tenshinhan.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Chi-Chi",
+    "original_name": "Chi-Chi",
+    "slug": "chi-chi",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/chi-chi.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/chi-chi.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Yamcha",
+    "original_name": "Yamcha",
+    "slug": "yamcha",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/yamcha.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/yamcha.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Gotenks",
+    "original_name": "Gotenks",
+    "slug": "gotenks",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gotenks.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gotenks.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Master Roshi",
+    "original_name": "Master Roshi",
+    "slug": "master_roshi",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/master_roshi.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/master_roshi.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Trunks",
+    "original_name": "Trunks",
+    "slug": "trunks",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/trunks.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/trunks.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Bardock",
+    "original_name": "Bardock",
+    "slug": "bardock",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/bardock.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/bardock.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Mr. Satan",
+    "original_name": "Mr. Satan",
+    "slug": "mr__satan",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/mr__satan.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/mr__satan.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Launch",
+    "original_name": "Launch",
+    "slug": "launch",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/launch.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/launch.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Dende",
+    "original_name": "Dende",
+    "slug": "dende",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/dende.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/dende.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Android 17",
+    "original_name": "Android 17",
+    "slug": "android_17",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/android_17.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/android_17.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Android 14",
+    "original_name": "Android 14",
+    "slug": "android_14",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/android_14.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/android_14.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Android 16",
+    "original_name": "Android 16",
+    "slug": "android_16",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/android_16.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/android_16.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Android 13",
+    "original_name": "Android 13",
+    "slug": "android_13",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/android_13.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/android_13.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Android 19",
+    "original_name": "Android 19",
+    "slug": "android_19",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/android_19.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/android_19.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Android 15",
+    "original_name": "Android 15",
+    "slug": "android_15",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/android_15.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/android_15.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Nail",
+    "original_name": "Nail",
+    "slug": "nail",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/nail.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/nail.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Dr. Gero (Android 20)",
+    "original_name": "Android 20 (Dr. Gero)",
+    "slug": "android_20__dr__gero",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/android_20__dr__gero.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/android_20__dr__gero.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Raditz",
+    "original_name": "Raditz",
+    "slug": "raditz",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/raditz.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/raditz.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Babidi",
+    "original_name": "Babidi",
+    "slug": "babidi",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/babidi.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/babidi.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Zeno",
+    "original_name": "Zeno",
+    "slug": "zeno",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/zeno.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/zeno.webp",
+    "universe": "Multiverse"
+  },
+  {
+    "name": "Majin Buu",
+    "original_name": "Majin Buu",
+    "slug": "majin_buu",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/majin_buu.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/majin_buu.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Beerus",
+    "original_name": "Bills",
+    "slug": "bills",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/bills.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/bills.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Whis",
+    "original_name": "Whis",
+    "slug": "whis",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/whis.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/whis.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kibito-Shin",
+    "original_name": "Kibito-Shin",
+    "slug": "kibito-shin",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kibito-shin.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kibito-shin.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Jiren",
+    "original_name": "Jiren",
+    "slug": "jiren",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/jiren.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/jiren.webp",
+    "universe": "Universe 11"
+  },
+  {
+    "name": "Dyspo",
+    "original_name": "Dyspo",
+    "slug": "dyspo",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/dyspo.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/dyspo.webp",
+    "universe": "Universe 11"
+  },
+  {
+    "name": "Toppo",
+    "original_name": "Toppo",
+    "slug": "toppo",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/toppo.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/toppo.webp",
+    "universe": "Universe 11"
+  },
+  {
+    "name": "Marcarita",
+    "original_name": "Marcarita",
+    "slug": "marcarita",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/marcarita.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/marcarita.webp",
+    "universe": "Universe 11"
+  },
+  {
+    "name": "Vermoudh",
+    "original_name": "Vermoudh",
+    "slug": "vermoudh",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vermoudh.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vermoudh.webp",
+    "universe": "Universe 11"
+  },
+  {
+    "name": "Android 18",
+    "original_name": "Android 18",
+    "slug": "android_18",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/android_18.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/android_18.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "King Kai",
+    "original_name": "Kaio del norte (Kaito)",
+    "slug": "kaio_del_norte__kaito",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kaio_del_norte__kaito.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kaio_del_norte__kaito.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Vegito",
+    "original_name": "Vegetto",
+    "slug": "vegetto",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegetto.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegetto.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Gogeta",
+    "original_name": "Gogeta",
+    "slug": "gogeta",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gogeta.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gogeta.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kaio del Sur",
+    "original_name": "Kaio del Sur",
+    "slug": "kaio_del_sur",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kaio_del_sur.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kaio_del_sur.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Janemba",
+    "original_name": "Janemba",
+    "slug": "janemba",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/janemba.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/janemba.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Grand Priest",
+    "original_name": "Grand Priest",
+    "slug": "grand_priest",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/grand_priest.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/grand_priest.webp",
+    "universe": "Multiverse"
+  },
+  {
+    "name": "Kaio del este",
+    "original_name": "Kaio del este",
+    "slug": "kaio_del_este",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kaio_del_este.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kaio_del_este.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Broly",
+    "original_name": "Broly",
+    "slug": "broly",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/broly.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/broly.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kaio del Oeste",
+    "original_name": "Kaio del Oeste",
+    "slug": "kaio_del_oeste",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kaio_del_oeste.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kaio_del_oeste.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Gran Kaio",
+    "original_name": "Gran Kaio",
+    "slug": "gran_kaio",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gran_kaio.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gran_kaio.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kaio-shin del Este",
+    "original_name": "Kaio-shin del Este",
+    "slug": "kaio-shin_del_este",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kaio-shin_del_este.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kaio-shin_del_este.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kaio-shin del Norte",
+    "original_name": "Kaio-shin del Norte",
+    "slug": "kaio-shin_del_norte",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kaio-shin_del_norte.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kaio-shin_del_norte.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kaio-shin del Oeste",
+    "original_name": "Kaio-shin del Oeste",
+    "slug": "kaio-shin_del_oeste",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kaio-shin_del_oeste.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kaio-shin_del_oeste.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kaio-shin del Sur",
+    "original_name": "Kaio-shin del Sur",
+    "slug": "kaio-shin_del_sur",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kaio-shin_del_sur.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kaio-shin_del_sur.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Gran Kaio-shin",
+    "original_name": "Gran Kaio-shin",
+    "slug": "gran_kaio-shin",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gran_kaio-shin.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gran_kaio-shin.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kibito",
+    "original_name": "Kibito",
+    "slug": "kibito",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/kibito.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/kibito.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Goku",
+    "original_name": "Goku SSJ",
+    "slug": "goku_ssj",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/goku_ssj.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/goku_ssj.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ2 Goku",
+    "original_name": "Goku SSJ2",
+    "slug": "goku_ssj2",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/goku_ssj2.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/goku_ssj2.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ4 Goku",
+    "original_name": "Goku SSJ4",
+    "slug": "goku_ssj4",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/goku_ssj4.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/goku_ssj4.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ3 Goku",
+    "original_name": "Goku SSJ3",
+    "slug": "goku_ssj3",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/goku_ssj3.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/goku_ssj3.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Blue Goku",
+    "original_name": "Goku SSJB",
+    "slug": "goku_ssjb",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/goku_ssjb.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/goku_ssjb.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ4 Vegeta",
+    "original_name": "Vegeta SSJ4",
+    "slug": "vegeta_ssj4",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegeta_ssj4.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegeta_ssj4.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ2 Vegeta",
+    "original_name": "Vegeta SSJ2",
+    "slug": "vegeta_ssj2",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegeta_ssj2.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegeta_ssj2.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Blue Vegeta",
+    "original_name": "Vegeta SSJB",
+    "slug": "vegeta_ssjb",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegeta_ssjb.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegeta_ssjb.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Ultra Ego Vegeta",
+    "original_name": "Vegeta Mega Instinc Evil",
+    "slug": "vegeta_mega_instinc_evil",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegeta_mega_instinc_evil.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegeta_mega_instinc_evil.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Vegeta",
+    "original_name": "Vegeta SSJ",
+    "slug": "vegeta_ssj",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegeta_ssj.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegeta_ssj.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Super Namekian Piccolo",
+    "original_name": "Piccolo Super Namekian",
+    "slug": "piccolo_super_namekian",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/piccolo_super_namekian.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/piccolo_super_namekian.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Orange Piccolo",
+    "original_name": "Piccolo Orange",
+    "slug": "piccolo_orange",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/piccolo_orange.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/piccolo_orange.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Second Form Frieza",
+    "original_name": "Freezer 2nd Form",
+    "slug": "freezer_2nd_form",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/freezer_2nd_form.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/freezer_2nd_form.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Monster Zarbon",
+    "original_name": "Zarbon Monster",
+    "slug": "zarbon_monster",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/zarbon_monster.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/zarbon_monster.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Final Form Frieza",
+    "original_name": "Freezer Perfect Form",
+    "slug": "freezer_perfect_form",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/freezer_perfect_form.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/freezer_perfect_form.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Third Form Frieza",
+    "original_name": "Freezer 3rd Form",
+    "slug": "freezer_3rd_form",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/freezer_3rd_form.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/freezer_3rd_form.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Semi-Perfect Cell",
+    "original_name": "Semi Perfect Form",
+    "slug": "semi_perfect_form",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/semi_perfect_form.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/semi_perfect_form.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Golden Frieza",
+    "original_name": "Freezer Perfect Form (Golden)",
+    "slug": "freezer_perfect_form__golden",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/freezer_perfect_form__golden.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/freezer_perfect_form__golden.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Super Perfect Cell",
+    "original_name": "Super Perfect Form",
+    "slug": "super_perfect_form",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/super_perfect_form.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/super_perfect_form.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Imperfect Cell",
+    "original_name": "Imperfect Form",
+    "slug": "imperfect_form",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/imperfect_form.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/imperfect_form.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Gohan",
+    "original_name": "Gohan SSJ",
+    "slug": "gohan_ssj",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gohan_ssj.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gohan_ssj.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ2 Gohan",
+    "original_name": "Gohan SSJ2",
+    "slug": "gohan_ssj2",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gohan_ssj2.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gohan_ssj2.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Trunks",
+    "original_name": "Trunks SSJ",
+    "slug": "trunks_ssj",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/trunks_ssj.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/trunks_ssj.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Beast Gohan",
+    "original_name": "Gohan Beast",
+    "slug": "gohan_beast",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gohan_beast.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gohan_beast.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ2 Trunks",
+    "original_name": "Trunks SSJ2",
+    "slug": "trunks_ssj2",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/trunks_ssj2.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/trunks_ssj2.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Ultimate Gohan",
+    "original_name": "Gohan Ultimate",
+    "slug": "gohan_ultimate",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gohan_ultimate.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gohan_ultimate.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Rage Trunks",
+    "original_name": "Trunks Rage",
+    "slug": "trunks_rage",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/trunks_rage.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/trunks_rage.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Super Buu",
+    "original_name": "Super Buu",
+    "slug": "super_buu",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/super_buu.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/super_buu.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Gotenks",
+    "original_name": "Gotenks SSJ",
+    "slug": "gotenks_ssj",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gotenks_ssj.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gotenks_ssj.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ3 Gotenks",
+    "original_name": "Gotenks SSJ3",
+    "slug": "gotenks_ssj3",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gotenks_ssj3.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gotenks_ssj3.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ3 Trunks",
+    "original_name": "Trunks SSJ3",
+    "slug": "trunks_ssj3",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/trunks_ssj3.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/trunks_ssj3.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Buutenks",
+    "original_name": "Majin Buu (Gotenks)",
+    "slug": "majin_buu__gotenks",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/majin_buu__gotenks.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/majin_buu__gotenks.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Buuhan",
+    "original_name": "Majin Buu (Gohan)",
+    "slug": "majin_buu__gohan",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/majin_buu__gohan.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/majin_buu__gohan.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Kid Buu",
+    "original_name": "Majin Buu (Pure)",
+    "slug": "majin_buu__pure",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/majin_buu__pure.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/majin_buu__pure.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Gogeta",
+    "original_name": "Gogeta SSJ",
+    "slug": "gogeta_ssj",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gogeta_ssj.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gogeta_ssj.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ4 Gogeta",
+    "original_name": "Gogeta SSJ4",
+    "slug": "gogeta_ssj4",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gogeta_ssj4.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gogeta_ssj4.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Blue Gogeta",
+    "original_name": "Gogeta SSJB",
+    "slug": "gogeta_ssjb",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gogeta_ssjb.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gogeta_ssjb.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Vegito",
+    "original_name": "Vegetto SSJ",
+    "slug": "vegetto_ssj",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegetto_ssj.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegetto_ssj.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Blue Vegito",
+    "original_name": "Vegetto SSJB",
+    "slug": "vegetto_ssjb",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/vegetto_ssjb.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/vegetto_ssjb.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Super Janemba",
+    "original_name": "Super Janemba",
+    "slug": "super_janemba",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/super_janemba.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/super_janemba.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "SSJ Blue Evolved Gogeta",
+    "original_name": "Gogeta SSJB Evolved",
+    "slug": "gogeta_ssjb_evolved",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/gogeta_ssjb_evolved.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/gogeta_ssjb_evolved.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Legendary SSJ Broly",
+    "original_name": "Broly SSJ Legendary",
+    "slug": "broly_ssj_legendary",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/broly_ssj_legendary.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/broly_ssj_legendary.webp",
+    "universe": "Universe 7"
+  },
+  {
+    "name": "Ultra Instinct Goku",
+    "original_name": "Goku Ultra Instinc",
+    "slug": "goku_ultra_instinc",
+    "ansi": "/home/oferg/.dotfiles/data/dragonball/ascii/goku_ultra_instinc.ansi",
+    "image": "/home/oferg/.local/share/dragonball-neofetch/images/goku_ultra_instinc.webp",
+    "universe": "Universe 7"
+  }
+]

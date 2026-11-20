@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Steam wrapper for Fedora 44 OpenSSL cert compatibility (RHBZ #2387674)
+if [ -f /etc/ssl/certs/ca-certificates.crt ] || [ -f /etc/pki/tls/cert.pem ]; then
+    exec /usr/bin/steam "$@"
+else
+    exec bwrap --dev-bind / / \
+        --tmpfs /etc/pki/tls \
+        --ro-bind /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/pki/tls/cert.pem \
+        --symlink /etc/crypto-policies/back-ends/openssl.config /etc/pki/tls/openssl.cnf \
+        --symlink /etc/pki/ca-trust/extracted/pem/directory-hash /etc/pki/tls/certs \
+        --tmpfs /etc/ssl \
+        --dir /etc/ssl/certs \
+        --ro-bind /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/certs/ca-certificates.crt \
+        --ro-bind /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/ca-bundle.pem \
+        --ro-bind /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem /etc/ssl/cert.pem \
+        --symlink /etc/pki/tls/openssl.cnf /etc/ssl/openssl.cnf \
+        /usr/bin/steam "$@"
+fi

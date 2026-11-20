@@ -96,6 +96,39 @@ deploy_configs() {
 
     # Neovim (LazyVim starter + custom plugins)
     link_file "${DOTFILES_DIR}/config/nvim" "$HOME/.config/nvim"
+
+    # Neofetch & Dragon Ball fetch
+    mkdir -p "$HOME/.local/bin" "$HOME/.local/share/dragonball-neofetch" "$HOME/.local/share/applications"
+    link_file "${DOTFILES_DIR}/bin/neofetch" "$HOME/.local/bin/neofetch"
+    link_file "${DOTFILES_DIR}/bin/dbfetch" "$HOME/.local/bin/dbfetch"
+    link_file "${DOTFILES_DIR}/bin/steam" "$HOME/.local/bin/steam"
+    link_file "${DOTFILES_DIR}/config/steam/steam.desktop" "$HOME/.local/share/applications/steam.desktop"
+    link_file "${DOTFILES_DIR}/data/dragonball/ascii" "$HOME/.local/share/dragonball-neofetch/ascii"
+    link_file "${DOTFILES_DIR}/data/dragonball/manifest.json" "$HOME/.local/share/dragonball-neofetch/manifest.json"
+
+    # Ptyxis Terminal Palettes
+    mkdir -p "$HOME/.local/share/org.gnome.Ptyxis/palettes"
+    link_file "${DOTFILES_DIR}/config/ptyxis/palettes/tokyo-night.palette" "$HOME/.local/share/org.gnome.Ptyxis/palettes/tokyo-night.palette"
+
+    # Ghostty Terminal Config
+    link_file "${DOTFILES_DIR}/config/ghostty/config" "$HOME/.config/ghostty/config"
+
+    # GNOME Dash to Panel & Desktop Settings
+    if has_cmd dconf; then
+        [ -f "${DOTFILES_DIR}/config/gnome/dash-to-panel.dconf" ] && dconf load /org/gnome/shell/extensions/dash-to-panel/ < "${DOTFILES_DIR}/config/gnome/dash-to-panel.dconf" 2>/dev/null || true
+        [ -f "${DOTFILES_DIR}/config/gnome/shell-keybindings.dconf" ] && dconf load /org/gnome/shell/keybindings/ < "${DOTFILES_DIR}/config/gnome/shell-keybindings.dconf" 2>/dev/null || true
+        [ -f "${DOTFILES_DIR}/config/gnome/mutter.dconf" ] && dconf load /org/gnome/mutter/ < "${DOTFILES_DIR}/config/gnome/mutter.dconf" 2>/dev/null || true
+        [ -f "${DOTFILES_DIR}/config/gnome/input-sources.dconf" ] && dconf load /org/gnome/desktop/input-sources/ < "${DOTFILES_DIR}/config/gnome/input-sources.dconf" 2>/dev/null || true
+        [ -f "${DOTFILES_DIR}/config/gnome/wm-keybindings.dconf" ] && dconf load /org/gnome/desktop/wm/keybindings/ < "${DOTFILES_DIR}/config/gnome/wm-keybindings.dconf" 2>/dev/null || true
+    fi
+
+    # Dash to Panel Super toggle patch (Super opens App Drawer, second press closes directly)
+    local DTP_DIR="$HOME/.local/share/gnome-shell/extensions/dash-to-panel@jderose9.github.com"
+    if [ -f "${DTP_DIR}/overview.js" ] && [ -f "${DOTFILES_DIR}/config/gnome/dash-to-panel-apps-toggle.patch" ]; then
+        if ! grep -q "_adaptAppsPageToggle" "${DTP_DIR}/overview.js"; then
+            patch -p1 -d "${DTP_DIR}" < "${DOTFILES_DIR}/config/gnome/dash-to-panel-apps-toggle.patch" 2>/dev/null || true
+        fi
+    fi
 }
 
 # ------------------------------------------------------------------------------
@@ -409,7 +442,48 @@ install_modern_tools() {
 }
 
 # ------------------------------------------------------------------------------
-# 5. Set Default Shell to Zsh
+# 5. Ghostty Terminal Emulator
+# ------------------------------------------------------------------------------
+install_ghostty() {
+    if has_cmd ghostty || [ -f "$HOME/.local/bin/ghostty" ]; then
+        log_info "Ghostty is already installed."
+        return 0
+    fi
+
+    log_info "Installing Ghostty terminal emulator..."
+
+    if has_cmd dnf; then
+        if has_cmd sudo; then
+            sudo dnf copr enable -y scottames/ghostty 2>/dev/null || true
+            sudo dnf install -y ghostty 2>/dev/null || true
+        fi
+    elif has_cmd pacman; then
+        if has_cmd sudo; then
+            sudo pacman -S --noconfirm --needed ghostty 2>/dev/null || true
+        fi
+    elif has_cmd apt-get; then
+        if has_cmd sudo; then
+            sudo install -d -m 0755 /etc/apt/keyrings 2>/dev/null || true
+            curl -fsSL https://deb.griffo.io/EA0F721D231FDD3A0A17B9AC7808B4DD62C41256.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/deb.griffo.io.gpg 2>/dev/null || true
+            echo "deb [signed-by=/etc/apt/keyrings/deb.griffo.io.gpg] https://deb.griffo.io/apt $(lsb_release -sc 2>/dev/null) main" | sudo tee /etc/apt/sources.list.d/deb.griffo.io.list > /dev/null 2>&1 || true
+            sudo apt-get update -qq 2>/dev/null || true
+            sudo apt-get install -y ghostty 2>/dev/null || true
+        fi
+    fi
+
+    if ! has_cmd ghostty && [ ! -f "$HOME/.local/bin/ghostty" ] && has_cmd snap; then
+        sudo snap install ghostty --classic 2>/dev/null || true
+    fi
+
+    if has_cmd ghostty || [ -f "$HOME/.local/bin/ghostty" ]; then
+        log_success "Ghostty installed successfully."
+    else
+        log_warn "Ghostty could not be installed automatically for this distro."
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# 6. Set Default Shell to Zsh
 # ------------------------------------------------------------------------------
 set_default_shell() {
     if ! has_cmd zsh; then
@@ -456,7 +530,10 @@ main() {
     # Step 5: Install modern CLI utilities (eza, zellij, lazygit, neovim, etc.)
     install_modern_tools
 
-    # Step 6: Switch shell to Zsh
+    # Step 6: Install Ghostty terminal emulator
+    install_ghostty
+
+    # Step 7: Switch shell to Zsh
     set_default_shell
 
     printf "\n%b========================================%b\n" "${GREEN}${BOLD}" "${NC}"

@@ -1,0 +1,66 @@
+--- a/overview.js
++++ b/overview.js
+@@ -68,6 +68,7 @@
+ 
+     this.toggleDash()
+     this._adaptAlloc()
++    this._adaptAppsPageToggle()
+ 
+     this._signalsHandler.add([
+       SETTINGS,
+@@ -87,6 +88,7 @@
+     this._disableHotKeys()
+     this._disableExtraShortcut()
+     this._disableClickToExit()
++    this._restoreAppsPageToggle()
+   }
+ 
+   toggleDash(visible) {
+@@ -140,6 +142,39 @@
+       },
+     )
+   }
++
++  _adaptAppsPageToggle() {
++    this._injectionManager.overrideMethod(
++      Object.getPrototypeOf(Main.overview),
++      'toggle',
++      () => () => {
++        if (Main.overview.isDummy) return
++
++        if (Main.overview.visible) {
++          Main.overview.hide()
++        } else {
++          Main.overview.showApps()
++        }
++      },
++    )
++
++    Utils.removeKeybinding('toggle-application-view')
++    Utils.addKeybinding(
++      'toggle-application-view',
++      new Gio.Settings({ schema_id: 'org.gnome.shell.keybindings' }),
++      () => {
++        if (Main.overview.visible) {
++          Main.overview.hide()
++        } else {
++          Main.overview.showApps()
++        }
++      },
++    )
++  }
++
++  _restoreAppsPageToggle() {
++    Utils.removeKeybinding('toggle-application-view')
++    let overviewControls = Main.overview._overview?._controls
++    if (overviewControls) {
++      Utils.addKeybinding(
++        'toggle-application-view',
++        new Gio.Settings({ schema_id: 'org.gnome.shell.keybindings' }),
++        overviewControls._toggleAppsPage.bind(overviewControls),
++      )
++    }
++  }
+ 
+   /**
+    * Isolate overview to open new windows for inactive apps

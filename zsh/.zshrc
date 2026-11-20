@@ -54,7 +54,6 @@ if command -v bat &>/dev/null || command -v batcat &>/dev/null; then
 fi
 
 alias zj='zellij'
-alias python='python3'
 
 # ripgrep
 if command -v rg &>/dev/null; then
@@ -124,6 +123,13 @@ alias c='clear'
 alias cls='clear'
 alias h='history'
 alias j='jobs'
+
+# ============================================================
+# python
+# ============================================================
+
+alias pipi="pip install"
+alias python='python3'
 
 # ============================================================
 # FZF
@@ -203,3 +209,18 @@ fi
 if command -v zoxide &>/dev/null; then
     eval "$(zoxide init zsh)"
 fi
+
+
+# Added by Antigravity CLI installer
+export PATH="/home/oferg/.local/bin:$PATH"
+alias agy='agy --dangerously-skip-permissions'
+
+# ============================================================
+# Fetch
+# ============================================================
+
+# Dragon Ball fetch on interactive startup
+if [[ -o interactive ]] && [[ -z "$VIMRUNTIME" ]] && [[ "$TERM" != "dumb" ]]; then
+    dbfetch
+fi
+typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet

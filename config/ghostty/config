@@ -1,0 +1,37 @@
+# ==============================================================================
+# Ghostty Configuration — Tokyo Night Modern Dark
+# ==============================================================================
+
+# Theme
+theme = TokyoNight
+
+# Typography
+font-family = JetBrains Mono
+font-size = 13
+font-feature = +liga
+font-feature = +calt
+
+# Window & Padding
+window-theme = dark
+window-padding-x = 14
+window-padding-y = 12
+window-padding-balance = true
+window-padding-color = background
+background-opacity = 1
+background-blur = false
+unfocused-split-opacity = 1
+
+# GTK / Titlebar Integration
+gtk-titlebar = true
+gtk-tabs-location = top
+gtk-wide-tabs = false
+
+# Cursor Styling
+cursor-style = bar
+cursor-style-blink = true
+
+# Behavior & Usability
+mouse-hide-while-typing = true
+confirm-close-surface = false
+copy-on-select = clipboard
+shell-integration = detect

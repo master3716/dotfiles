@@ -58,6 +58,7 @@ exec zsh
 * **[direnv](https://direnv.net/)**: Automatic per-directory environment variables
 * **[lazygit](https://github.com/jesseduffield/lazygit)**: Interactive terminal UI for Git
 * **[zellij](https://zellij.dev/)**: Fast, customizable terminal multiplexer (`zj` alias)
+* **[ghostty](https://ghostty.org/)**: Fast, feature-rich, GPU-accelerated terminal emulator (Tokyo Night theme, non-transparent)
 
 ### 3. Editor (Neovim + LazyVim)
 * **[Neovim](https://neovim.io/)** with **[LazyVim](https://www.lazyvim.org/)** starter
@@ -88,6 +89,8 @@ exec zsh
 │   ├── .zshenv                # Shell environment exports
 │   └── .p10k.zsh              # Powerlevel10k theme configuration
 └── config/
+    ├── ghostty/
+    │   └── config             # Ghostty Tokyo Night modern configuration
     ├── nvim/                  # Neovim (LazyVim) configuration
     │   ├── init.lua
     │   ├── lazyvim.json

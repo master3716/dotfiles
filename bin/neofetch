@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# ============================================================
+# Dragon Ball Neofetch / dbfetch (powered by Fastfetch)
+# ============================================================
+
+DBZ_DIR="${HOME}/.local/share/dragonball-neofetch"
+ANSI_DIR="${DBZ_DIR}/ascii"
+MANIFEST="${DBZ_DIR}/manifest.json"
+FASTFETCH_BIN="${HOME}/.local/bin/fastfetch"
+CLASSIC_NEOFETCH="${HOME}/.local/libexec/neofetch-classic"
+
+# Fallback check
+if [[ ! -d "$ANSI_DIR" ]]; then
+    if [[ -x "$CLASSIC_NEOFETCH" ]]; then
+        exec "$CLASSIC_NEOFETCH" "$@"
+    elif command -v fastfetch &>/dev/null; then
+        exec fastfetch "$@"
+    fi
+    exit 1
+fi
+
+case "$1" in
+    --classic)
+        shift
+        exec "$CLASSIC_NEOFETCH" "$@"
+        ;;
+    --list)
+        echo -e "\033[1;38;2;122;162;247mAvailable Dragon Ball Characters:\033[0m"
+        if [[ -f "$MANIFEST" ]] && command -v python3 &>/dev/null; then
+            python3 -c "
+import json
+with open('$MANIFEST') as f:
+    items = json.load(f)
+seen = set()
+for i in sorted(items, key=lambda x: (x.get('universe', ''), x['name'])):
+    name = i['name']
+    u = i.get('universe', 'Universe 7')
+    if name not in seen:
+        seen.add(name)
+        print(f'  • {name:<28} \033[38;2;125;207;255m[{u}]\033[0m')
+"
+        else
+            for f in "$ANSI_DIR"/*.ansi; do
+                base=$(basename "$f" .ansi)
+                echo "  • ${base//_/ }"
+            done | sort -u
+        fi
+        exit 0
+        ;;
+    --version|-v)
+        exec "$FASTFETCH_BIN" --version
+        ;;
+    --help|-h)
+        cat << 'EOF'
+dbfetch / neofetch - System information tool with Dragon Ball characters
+
+Usage:
+  dbfetch                      Show system info with a random Dragon Ball character
+  dbfetch <character>          Show system info with a specific character or form
+                               Examples:
+                                 dbfetch goku
+                                 dbfetch "ssj goku"
+                                 dbfetch "ssj blue vegeta"
+                                 dbfetch "ultra instinct"
+                                 dbfetch frieza
+  dbfetch --list               List all available Dragon Ball characters
+  dbfetch --classic            Run classic original neofetch
+  dbfetch [fastfetch-opts]     Forward options to fastfetch
+EOF
+        exit 0
+        ;;
+esac
+
+CHOSEN=""
+
+# Search matching character if specified
+if [[ -n "$1" && "$1" != -* ]]; then
+    QUERY="$1"
+    shift
+    if [[ -f "$MANIFEST" ]] && command -v python3 &>/dev/null; then
+        CHOSEN=$(python3 -c "
+import json, sys, random
+q = sys.argv[1].lower()
+with open('$MANIFEST') as f:
+    items = json.load(f)
+words = q.split()
+matches = [i['ansi'] for i in items if all(w in i['name'].lower() or w in i['slug'].lower() for w in words)]
+if matches:
+    print(random.choice(matches))
+" "$QUERY")
+    fi
+
+    # Fallback to direct filename matching if not found via manifest
+    if [[ -z "$CHOSEN" || ! -f "$CHOSEN" ]]; then
+        safe_q=$(echo "$QUERY" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+        matches=("$ANSI_DIR"/*"$safe_q"*.ansi)
+        if [[ -f "${matches[0]}" ]]; then
+            CHOSEN="${matches[RANDOM % ${#matches[@]}]}"
+        fi
+    fi
+fi
+
+# Pick random character if none specified or matched
+if [[ -z "$CHOSEN" || ! -f "$CHOSEN" ]]; then
+    all_chars=("$ANSI_DIR"/*.ansi)
+    if (( ${#all_chars[@]} > 0 )); then
+        CHOSEN="${all_chars[RANDOM % ${#all_chars[@]}]}"
+    fi
+fi
+
+# Execute fastfetch with neofetch layout and chosen Dragon Ball logo
+if [[ -n "$CHOSEN" && -f "$CHOSEN" ]]; then
+    exec "$FASTFETCH_BIN" -c neofetch --logo-type file --logo "$CHOSEN" --logo-padding-right 3 "$@"
+else
+    exec "$FASTFETCH_BIN" -c neofetch "$@"
+fi

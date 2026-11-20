@@ -1,0 +1,5 @@
+[/]
+current=uint32 0
+mru-sources=[('xkb', 'us'), ('xkb', 'il')]
+sources=[('xkb', 'us'), ('xkb', 'il')]
+xkb-options=['grp:alt_shift_toggle']
