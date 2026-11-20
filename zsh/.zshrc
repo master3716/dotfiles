@@ -219,12 +219,8 @@ alias agy='agy --dangerously-skip-permissions'
 # Fetch
 # ============================================================
 
-# Nothing OS dot-matrix fetch on interactive startup (or dbfetch fallback)
+# Dragon Ball fetch on interactive startup
 if [[ -o interactive ]] && [[ -z "$VIMRUNTIME" ]] && [[ "$TERM" != "dumb" ]]; then
-    if command -v fastfetch &>/dev/null && [[ -f "$HOME/.config/fastfetch/config.jsonc" ]]; then
-        fastfetch --config "$HOME/.config/fastfetch/config.jsonc"
-    elif command -v dbfetch &>/dev/null; then
-        dbfetch
-    fi
+    dbfetch
 fi
 typeset -g POWERLEVEL9K_INSTANT_PROMPT=quiet
