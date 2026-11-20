@@ -1,11 +1,33 @@
 # ==============================================================================
-# Ghostty Configuration — Tokyo Night Modern Dark
+# Ghostty Configuration — Nothing OS Dark Matte & Red Accent
 # ==============================================================================
 
-# Theme
-theme = TokyoNight
+# Nothing OS Color Palette
+background = #0b0b0b
+foreground = #c4c4c4
+cursor-color = #d71921
+cursor-text = #0b0b0b
+selection-background = #212121
+selection-foreground = #ffffff
 
-# Typography
+palette = 0=#0b0b0b
+palette = 1=#d71921
+palette = 2=#8a8a8a
+palette = 3=#c4c4c4
+palette = 4=#6e6e6e
+palette = 5=#8a8a8a
+palette = 6=#8a8a8a
+palette = 7=#c4c4c4
+palette = 8=#454545
+palette = 9=#ff4d4d
+palette = 10=#c4c4c4
+palette = 11=#ffffff
+palette = 12=#c4c4c4
+palette = 13=#c4c4c4
+palette = 14=#c4c4c4
+palette = 15=#ffffff
+
+# Typography (JetBrains Mono / Ndot style)
 font-family = JetBrains Mono
 font-size = 13
 font-feature = +liga
@@ -13,13 +35,13 @@ font-feature = +calt
 
 # Window & Padding
 window-theme = dark
-window-padding-x = 14
-window-padding-y = 12
+window-padding-x = 18
+window-padding-y = 16
 window-padding-balance = true
 window-padding-color = background
 background-opacity = 1
 background-blur = false
-unfocused-split-opacity = 1
+unfocused-split-opacity = 0.85
 
 # GTK / Titlebar Integration
 gtk-titlebar = true

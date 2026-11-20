@@ -526,6 +526,9 @@ SAVED_GTK_THEME=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/nul
 SAVED_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null || echo "'Adwaita'")
 SAVED_FONT_NAME=$(gsettings get org.gnome.desktop.interface font-name 2>/dev/null || echo "'Adwaita Sans 11'")
 SAVED_ACCENT_COLOR=$(gsettings get org.gnome.desktop.interface accent-color 2>/dev/null || echo "''")
+SAVED_PICTURE_URI=$(gsettings get org.gnome.desktop.background picture-uri 2>/dev/null || echo "''")
+SAVED_PICTURE_URI_DARK=$(gsettings get org.gnome.desktop.background picture-uri-dark 2>/dev/null || echo "''")
+SAVED_WALLPAPER_ENGINE_ENABLED=$(has_cmd gnome-extensions && gnome-extensions list --enabled 2>/dev/null | grep -q "gnome-wallpaper-engine" && echo "true" || echo "false")
 EOF
         log_info "Saved current theme settings to ${BACKUP_ENV}"
     fi
@@ -574,6 +577,15 @@ EOF
         gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
         gsettings set org.gnome.desktop.interface icon-theme 'Nothing' 2>/dev/null || true
         gsettings set org.gnome.desktop.interface font-name 'Inter Variable 10' 2>/dev/null || true
+
+        # Wallpaper
+        log_info "Applying Nothing OS wallpaper..."
+        gsettings set org.gnome.desktop.background picture-uri "file://${DOTFILES_DIR}/config/hypr/wallpaper.png" 2>/dev/null || true
+        gsettings set org.gnome.desktop.background picture-uri-dark "file://${DOTFILES_DIR}/config/hypr/wallpaper.png" 2>/dev/null || true
+        gsettings set org.gnome.desktop.background picture-options "zoom" 2>/dev/null || true
+        if has_cmd gnome-extensions && gnome-extensions list --enabled 2>/dev/null | grep -q "gnome-wallpaper-engine"; then
+            gnome-extensions disable gnome-wallpaper-engine@gjs.com 2>/dev/null || true
+        fi
     fi
 
     # Nought Desktop & Compositor Configs

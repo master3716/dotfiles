@@ -56,8 +56,13 @@ if [ -f "$BACKUP_ENV" ]; then
     [ -n "${SAVED_ICON_THEME:-}" ]   && gsettings set org.gnome.desktop.interface icon-theme "$SAVED_ICON_THEME" 2>/dev/null || true
     [ -n "${SAVED_FONT_NAME:-}" ]    && gsettings set org.gnome.desktop.interface font-name "$SAVED_FONT_NAME" 2>/dev/null || true
     [ -n "${SAVED_ACCENT_COLOR:-}" ] && gsettings set org.gnome.desktop.interface accent-color "$SAVED_ACCENT_COLOR" 2>/dev/null || true
+    [ -n "${SAVED_PICTURE_URI:-}" ]      && gsettings set org.gnome.desktop.background picture-uri "$SAVED_PICTURE_URI" 2>/dev/null || true
+    [ -n "${SAVED_PICTURE_URI_DARK:-}" ] && gsettings set org.gnome.desktop.background picture-uri-dark "$SAVED_PICTURE_URI_DARK" 2>/dev/null || true
+    if [ "${SAVED_WALLPAPER_ENGINE_ENABLED:-false}" = "true" ] && command -v gnome-extensions >/dev/null 2>&1; then
+        gnome-extensions enable gnome-wallpaper-engine@gjs.com 2>/dev/null || true
+    fi
     rm -f "$BACKUP_ENV"
-    log_success "Restored GNOME theme settings from backup file."
+    log_success "Restored GNOME theme & wallpaper settings from backup file."
 else
     # Default fallbacks
     gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
@@ -65,6 +70,8 @@ else
     gsettings set org.gnome.desktop.interface icon-theme 'Adwaita' 2>/dev/null || true
     gsettings set org.gnome.desktop.interface font-name 'Adwaita Sans 11' 2>/dev/null || true
     gsettings reset org.gnome.desktop.interface accent-color 2>/dev/null || true
+    gsettings reset org.gnome.desktop.background picture-uri 2>/dev/null || true
+    gsettings reset org.gnome.desktop.background picture-uri-dark 2>/dev/null || true
     log_success "Reset GNOME theme settings to system defaults (Adwaita)."
 fi
 
@@ -134,6 +141,12 @@ fi
 if command -v spicetify >/dev/null 2>&1; then
     spicetify restore >/dev/null 2>&1 || true
     log_info "Restored Spicetify Spotify configuration."
+fi
+
+# 9. Restore Terminal Theme (Ghostty)
+if [ -f "${DOTFILES_DIR}/config/ghostty/config.tokyonight.bak" ]; then
+    log_info "Restoring Ghostty Tokyo Night terminal configuration..."
+    cp -f "${DOTFILES_DIR}/config/ghostty/config.tokyonight.bak" "${DOTFILES_DIR}/config/ghostty/config"
 fi
 
 echo -e "\n${GREEN}${BOLD}✓ Nought has been successfully reverted!${NC}"
