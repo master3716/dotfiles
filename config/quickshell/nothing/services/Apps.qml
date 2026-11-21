@@ -137,6 +137,12 @@ Singleton {
             "file://" + Quickshell.shellPath("assets/icons/kitty.png")
         ],
         vesktop: [
+            "file://" + (Quickshell.env("HOME") ?? "") + "/.local/share/icons/hicolor/scalable/apps/dev.vencord.Vesktop.svg",
+            "file:///usr/share/icons/Qogir-Dark/scalable/apps/vesktop.svg",
+            "file:///usr/share/icons/hicolor/scalable/apps/vesktop.svg"
+        ],
+        "dev.vencord.vesktop": [
+            "file://" + (Quickshell.env("HOME") ?? "") + "/.local/share/icons/hicolor/scalable/apps/dev.vencord.Vesktop.svg",
             "file:///usr/share/icons/Qogir-Dark/scalable/apps/vesktop.svg",
             "file:///usr/share/icons/hicolor/scalable/apps/vesktop.svg"
         ],

@@ -306,7 +306,7 @@ hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDI
 hl.bind(mainMod .. " + ALT + M",   hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
 
 -- Discord global keybinds
-hl.bind("F12", hl.dsp.send_shortcut({ mods = "CTRL SHIFT", key = "d", window = "class:^([Dd]iscord|[Vv]esktop)$" }), { locked = true })
+hl.bind("F12", hl.dsp.send_shortcut({ mods = "CTRL SHIFT", key = "d", window = "class:.*([Dd]iscord|[Vv]esktop).*" }), { locked = true })
 
 hl.bind("XF86MonBrightnessUp",   hl.dsp.global("quickshell:brightnessUp"),
     { locked = true, repeating = true })

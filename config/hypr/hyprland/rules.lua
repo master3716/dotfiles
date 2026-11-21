@@ -15,7 +15,7 @@ hl.window_rule({
 hl.window_rule({
     name  = "no-flashbang",
     match = {
-        class = "^(vesktop|discord|spotify|chromium.*|code|[Ee]lectron.*|[Ss]lack|obsidian)$",
+        class = "^(vesktop|dev\\.vencord\\.Vesktop|discord|spotify|chromium.*|code|[Ee]lectron.*|[Ss]lack|obsidian)$",
         title = "^$",
     },
     opacity = "0.0 override",
