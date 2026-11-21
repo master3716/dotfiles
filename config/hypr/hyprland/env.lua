@@ -1,6 +1,11 @@
 -- Environment. Aligns with the illogical-impulse configuration, which
 -- has the merit of being proven on this machine.
 
+-- User binaries in PATH
+local home = os.getenv("HOME") or ""
+local userPath = home .. "/.local/bin:" .. home .. "/bin:" .. (os.getenv("PATH") or "/usr/local/bin:/usr/bin")
+hl.env("PATH", userPath)
+
 -- Repo root, for children that need it without being able to deduce it
 -- (the generated hypridle config finds scripts/lock.sh there). Launch scripts
 -- already set it; this covers a Hyprland started by hand.

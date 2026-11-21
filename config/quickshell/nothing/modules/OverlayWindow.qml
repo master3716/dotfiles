@@ -44,12 +44,24 @@ PanelWindow {
     screen: modelData
     color: "transparent"
 
-    // The panel is created on every screen but only shown on the one
-    // you are working on, rather than always on the primary.
-    readonly property bool onFocusedMonitor:
-        (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "")
+    // Locked to the screen where it was opened so moving the mouse to another monitor doesn't jump it
+    property bool activeOnThisScreen: false
 
-    visible: open && onFocusedMonitor
+    onOpenChanged: {
+        if (open) {
+            activeOnThisScreen = (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "");
+        } else {
+            activeOnThisScreen = false;
+        }
+    }
+
+    Component.onCompleted: {
+        if (open) {
+            activeOnThisScreen = (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "");
+        }
+    }
+
+    visible: open && activeOnThisScreen
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nothing-overlay"
     WlrLayershell.keyboardFocus: win.visible

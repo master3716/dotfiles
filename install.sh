@@ -629,6 +629,7 @@ Dotfiles installer with multi-distro and Nought (Nothing OS) rice support.
 
 Options:
   -h, --help            Show this help message
+  -u, --ubuntu          Run Ubuntu / Debian specific installer (Hyprland rice, PPA, tools)
   -n, --nought          Deploy Nought (Nothing OS) desktop rice and theme
       --revert-nought   Revert Nought theme and configs back to original state
   -a, --all             Run full dotfiles installation and deploy Nought rice
@@ -642,6 +643,7 @@ EOF
 # Main
 # ------------------------------------------------------------------------------
 main() {
+    local RUN_UBUNTU=false
     local RUN_NOUGHT=false
     local RUN_REVERT_NOUGHT=false
     local RUN_CORE=true
@@ -651,6 +653,11 @@ main() {
             -h|--help)
                 show_help
                 exit 0
+                ;;
+            -u|--ubuntu)
+                RUN_UBUNTU=true
+                RUN_CORE=false
+                shift
                 ;;
             -n|--nought)
                 RUN_NOUGHT=true
@@ -672,6 +679,16 @@ main() {
                 ;;
         esac
     done
+
+    if [ "$RUN_UBUNTU" = true ]; then
+        if [ -f "${DOTFILES_DIR}/install-ubuntu.sh" ]; then
+            bash "${DOTFILES_DIR}/install-ubuntu.sh"
+            exit 0
+        else
+            log_error "install-ubuntu.sh not found."
+            exit 1
+        fi
+    fi
 
     if [ "$RUN_REVERT_NOUGHT" = true ]; then
         revert_nought

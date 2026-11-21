@@ -30,6 +30,26 @@ SettingsPage {
         }
 
         SettingRow {
+            key: "dockShowNothing"
+            label: "Nothing button"
+            hint: "The dot grid button that opens the Nothing launcher and tools shelf"
+            DotSwitch {
+                checked: Config.dockShowNothing
+                onToggled: (v) => { Config.dockShowNothing = v; Config.save(); }
+            }
+        }
+
+        SettingRow {
+            key: "dockShowSession"
+            label: "Power / Session button"
+            hint: "The power button for shutdown, reboot, lock, and system settings"
+            DotSwitch {
+                checked: Config.dockShowSession
+                onToggled: (v) => { Config.dockShowSession = v; Config.save(); }
+            }
+        }
+
+        SettingRow {
             key: "dockAutoHide"
             label: "Auto hide"
             hint: "Shown on an empty workspace, hidden when a window is open - hover the bottom edge to bring it back"

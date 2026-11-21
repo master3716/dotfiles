@@ -19,13 +19,30 @@ PanelWindow {
 
     screen: modelData
 
-    readonly property bool onFocusedMonitor:
-        (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "")
+    // Locked to the screen where it was opened so moving the mouse to another monitor doesn't jump it
+    property bool activeOnThisScreen: false
+
+    Connections {
+        target: GlobalState
+        function onSettingsOpenChanged(): void {
+            if (GlobalState.settingsOpen) {
+                win.activeOnThisScreen = (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "");
+            } else {
+                win.activeOnThisScreen = false;
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        if (GlobalState.settingsOpen) {
+            win.activeOnThisScreen = (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "");
+        }
+    }
 
     property bool open: GlobalState.settingsOpen
 
     color: "transparent"
-    visible: open && onFocusedMonitor
+    visible: open && activeOnThisScreen
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nothing-settings"
     WlrLayershell.keyboardFocus: win.visible

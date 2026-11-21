@@ -23,13 +23,30 @@ PanelWindow {
 
     screen: modelData
 
-    readonly property bool onFocusedMonitor:
-        (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "")
+    // Locked to the screen where it was opened so moving the mouse to another monitor doesn't jump it
+    property bool activeOnThisScreen: false
+
+    Connections {
+        target: GlobalState
+        function onDisplaysOpenChanged(): void {
+            if (GlobalState.displaysOpen) {
+                win.activeOnThisScreen = (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "");
+            } else {
+                win.activeOnThisScreen = false;
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        if (GlobalState.displaysOpen) {
+            win.activeOnThisScreen = (Hyprland.focusedMonitor?.name ?? "") === (win.modelData?.name ?? "");
+        }
+    }
 
     property bool open: GlobalState.displaysOpen
 
     color: "transparent"
-    visible: open && onFocusedMonitor
+    visible: open && activeOnThisScreen
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.namespace: "nothing-displays"
     WlrLayershell.keyboardFocus: win.visible
@@ -112,8 +129,14 @@ PanelWindow {
     // ── The map ───────────────────────────────────────────────────────
     // A screen at scale 2 occupies half the desktop it is worth in pixels,
     // and the map is a picture of the desktop, so logical size throughout.
-    function logicalW(s: var): int { return Math.round(s.w / (s.scale > 0 ? s.scale : 1)); }
-    function logicalH(s: var): int { return Math.round(s.h / (s.scale > 0 ? s.scale : 1)); }
+    function logicalW(s: var): int {
+        const raw = (s.transform === 1 || s.transform === 3) ? s.h : s.w;
+        return Math.round(raw / (s.scale > 0 ? s.scale : 1));
+    }
+    function logicalH(s: var): int {
+        const raw = (s.transform === 1 || s.transform === 3) ? s.w : s.h;
+        return Math.round(raw / (s.scale > 0 ? s.scale : 1));
+    }
 
     // Dropped where it nearly lines up, put it exactly there: a gap of
     // eleven pixels between two screens is never what anybody wanted.

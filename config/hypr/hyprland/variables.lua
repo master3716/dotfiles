@@ -4,7 +4,9 @@
 function exists(bin)
     -- os.execute() does not work here (Hyprland reaps its own children,
     -- system() returns ECHILD), so we use io.popen instead.
-    local f = io.popen("command -v " .. bin .. " 2>/dev/null")
+    local home = os.getenv("HOME") or ""
+    local userPath = home .. "/.local/bin:" .. home .. "/bin:" .. (os.getenv("PATH") or "/usr/local/bin:/usr/bin")
+    local f = io.popen("PATH='" .. userPath .. "' command -v " .. bin .. " 2>/dev/null")
     if not f then return false end
     local out = f:read("*l")
     f:close()
@@ -106,5 +108,5 @@ RED      = "rgba(d71921ff)"
 INACTIVE = "rgba(1a1a1aff)"
 BG       = "rgba(c4c4c4ff)"
 
-cursorTheme = "Bibata-Modern-Classic"
+cursorTheme = "Adwaita"
 cursorSize  = "24"

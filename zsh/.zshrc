@@ -115,6 +115,9 @@ alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
 
+# Search these directories when running cd <dir>
+cdpath=(. ~ ~/HardDrive)
+
 # ============================================================
 # Useful commands
 # ============================================================
@@ -207,7 +210,9 @@ fi
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 if command -v zoxide &>/dev/null; then
-    eval "$(zoxide init zsh)"
+    eval "$(zoxide init zsh --cmd cd)"
+    alias z='cd'
+    alias zi='cdi'
 fi
 
 

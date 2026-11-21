@@ -42,10 +42,14 @@ Singleton {
             return { x: 0, y: 0, w: 1, h: 1 };
         let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
         for (const s of on) {
+            const sw = (s.transform === 1 || s.transform === 3) ? s.h : s.w;
+            const sh = (s.transform === 1 || s.transform === 3) ? s.w : s.h;
+            const lw = Math.round(sw / (s.scale > 0 ? s.scale : 1));
+            const lh = Math.round(sh / (s.scale > 0 ? s.scale : 1));
             x0 = Math.min(x0, s.x);
             y0 = Math.min(y0, s.y);
-            x1 = Math.max(x1, s.x + s.w);
-            y1 = Math.max(y1, s.y + s.h);
+            x1 = Math.max(x1, s.x + lw);
+            y1 = Math.max(y1, s.y + lh);
         }
         return { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
     }
@@ -318,8 +322,8 @@ Singleton {
         for (const s of list) {
             specs.push({ output: s.name, mode: "preferred",
                          position: x + "x0", scale: s.scale, mirror: "none" });
-            // Logical width: a screen at scale 2 takes half the room.
-            x += Math.round(s.w / (s.scale > 0 ? s.scale : 1));
+            const sw = (s.transform === 1 || s.transform === 3) ? s.h : s.w;
+            x += Math.round(sw / (s.scale > 0 ? s.scale : 1));
         }
         root.tryOut(specs);
     }

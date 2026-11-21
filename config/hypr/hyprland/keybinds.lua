@@ -123,17 +123,19 @@ end)
 -- know, and binds that appear and disappear with a setting are worse than
 -- binds that quietly do nothing.
 --
--- ALT with the arrows moves along the tape, SHIFT+ALT carries the column
--- with you. Everything here is one hand on SUPER+ALT.
-hl.bind(mainMod .. " + ALT + Left",  hl.dsp.layout("move -col"), { repeating = true })
-hl.bind(mainMod .. " + ALT + Right", hl.dsp.layout("move +col"), { repeating = true })
+--# Window resize with Alt + Arrows and Super + Alt + Arrows
+hl.bind("ALT + Left",                 ratio(-0.05), { repeating = true })
+hl.bind("ALT + Right",                ratio(0.05),  { repeating = true })
+hl.bind("ALT + Up",                   ratio(-0.05), { repeating = true })
+hl.bind("ALT + Down",                 ratio(0.05),  { repeating = true })
+hl.bind(mainMod .. " + ALT + Left",   ratio(-0.05), { repeating = true })
+hl.bind(mainMod .. " + ALT + Right",  ratio(0.05),  { repeating = true })
+hl.bind(mainMod .. " + ALT + Up",     ratio(-0.05), { repeating = true })
+hl.bind(mainMod .. " + ALT + Down",   ratio(0.05),  { repeating = true })
+
+--# Scrolling column swap
 hl.bind(mainMod .. " + SHIFT + ALT + Left",  hl.dsp.layout("swapcol l"))
 hl.bind(mainMod .. " + SHIFT + ALT + Right", hl.dsp.layout("swapcol r"))
-
--- Up takes the window out into its own column, Down folds it into the one
--- before it. Stacking and unstacking, in the direction you would expect.
-hl.bind(mainMod .. " + ALT + Up",   hl.dsp.layout("expel"))
-hl.bind(mainMod .. " + ALT + Down", hl.dsp.layout("consume"))
 
 hl.bind(mainMod .. " + ALT + C",      hl.dsp.layout("center"))
 
@@ -302,6 +304,9 @@ hl.bind("XF86AudioMute",    hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@
 hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
 hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),   { locked = true })
 hl.bind(mainMod .. " + ALT + M",   hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
+
+-- Discord global keybinds
+hl.bind("F12", hl.dsp.send_shortcut({ mods = "CTRL SHIFT", key = "d", window = "class:^([Dd]iscord|[Vv]esktop)$" }), { locked = true })
 
 hl.bind("XF86MonBrightnessUp",   hl.dsp.global("quickshell:brightnessUp"),
     { locked = true, repeating = true })

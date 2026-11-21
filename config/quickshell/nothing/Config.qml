@@ -39,6 +39,8 @@ Singleton {
     property alias showTray: a.showTray
     property alias showBattery: a.showBattery
     property alias showWorkspaces: a.showWorkspaces
+    property alias customKeybinds: a.customKeybinds
+    property alias keybindOverrides: a.keybindOverrides
 
     // What sits in each island of the bar, in order. See BarRegistry.
     property alias barLeft: a.barLeft
@@ -123,6 +125,8 @@ Singleton {
 
     // ── Dock ──────────────────────────────────────────────────────────
     property alias dockApps: a.dockApps
+    property alias dockShowNothing: a.dockShowNothing
+    property alias dockShowSession: a.dockShowSession
 
     // ── Dock and workspaces ───────────────────────────────────────────
     property alias dockAutoHide: a.dockAutoHide
@@ -1275,6 +1279,8 @@ Singleton {
             property bool showTray: true
             property bool showBattery: true
             property bool showWorkspaces: true
+            property var customKeybinds: []
+            property var keybindOverrides: []
             property bool barShowCpu: true
             property bool barShowRam: true
             property bool barShowGpu: true
@@ -1336,6 +1342,8 @@ Singleton {
 
             // .desktop identifiers. The dock only shows those that exist on
             // this machine, so a missing entry is ignored instead of a dead icon.
+            property bool dockShowNothing: true
+            property bool dockShowSession: true
             property bool dockAutoHide: true
             property int  dockHideDelay: 700   // grace ms after the pointer leaves
 

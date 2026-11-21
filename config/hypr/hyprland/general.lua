@@ -121,6 +121,10 @@ hl.config({
         inactive_timeout  = 4,
         hide_on_key_press = false,
     },
+
+    xwayland = {
+        force_zero_scaling = true,
+    },
 })
 
 hl.gesture({ fingers = 3, direction = "horizontal", action = "workspace" })

@@ -215,13 +215,13 @@ PanelWindow {
         .filter(x => x.entry !== null)
 
     // ── Trigger strip, glued to the bottom edge ───────────────────────
-    // Not the full width: only under the dock. A fullscreen chat has its
-    // input bar at the bottom, but not necessarily in the centre.
+    // Full width across the bottom of the screen so the dock reveals
+    // no matter where along the bottom edge the pointer touches.
     MouseArea {
         id: hotzone
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.left: parent.left
+        anchors.right: parent.right
         anchors.bottom: parent.bottom
-        width: Math.max(dock.width + Theme.px(16), Theme.px(160))
         height: Theme.px(2)
         hoverEnabled: true
         acceptedButtons: Qt.NoButton
@@ -247,7 +247,7 @@ PanelWindow {
         // EFFECTIVE visibility, ancestors included, so "parent visible when
         // child is" and "child visible when it has opacity" locked each other
         // at false and the shelf never appeared at all.
-        visible: win.shelfOpen || shelf.opacity > 0.01
+        visible: nothingSlot.visible && (win.shelfOpen || shelf.opacity > 0.01)
 
         onContainsMouseChanged: {
             if (containsMouse) shelfHide.stop();
@@ -411,7 +411,8 @@ PanelWindow {
 
                 Item {
                     id: osSlot
-                    Layout.preferredWidth: Theme.z.dockSlot
+                    visible: Config.dockShowSession
+                    Layout.preferredWidth: visible ? Theme.z.dockSlot : 0
                     Layout.preferredHeight: Theme.z.dockSlot
 
                     Rectangle {
@@ -421,12 +422,14 @@ PanelWindow {
                         Behavior on color { ColorAnimation { duration: Theme.fast } }
                     }
 
-                    AppIcon {
+                    NIcon {
                         anchors.centerIn: parent
                         anchors.verticalCenterOffset: -Theme.px(2)
-                        iconName: "endeavouros"
+                        text: "󰐥"
                         size: Theme.z.dockIcon
+                        color: oma.containsMouse ? Theme.c.red : Theme.c.on
                         opacity: oma.containsMouse ? 1 : 0.9
+                        Behavior on color { ColorAnimation { duration: Theme.fast } }
                     }
 
                     MouseArea {
@@ -460,7 +463,8 @@ PanelWindow {
                 // not applications you commit to launching.
                 Item {
                     id: nothingSlot
-                    Layout.preferredWidth: Theme.z.dockSlot
+                    visible: Config.dockShowNothing
+                    Layout.preferredWidth: visible ? Theme.z.dockSlot : 0
                     Layout.preferredHeight: Theme.z.dockSlot
 
                     Rectangle {
@@ -519,6 +523,7 @@ PanelWindow {
                 }
 
                 Rectangle {
+                    visible: (osSlot.visible || nothingSlot.visible) && win.entries.length > 0
                     Layout.preferredWidth: 1
                     Layout.preferredHeight: Theme.px(18)
                     Layout.leftMargin: Theme.px(4)

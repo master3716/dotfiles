@@ -18,6 +18,8 @@ hl.config({ misc = { allow_session_lock_restore = true } })
 -- start-hyprland can emit hyprland.start before Lua is loaded, so we
 -- run this both on the event and immediately. The guard is process-based.
 local function startup()
+    hl.exec_cmd("udisksctl mount -b /dev/disk/by-label/HardDrive 2>/dev/null; udisksctl mount -b /dev/disk/by-label/SSD 2>/dev/null")
+    hl.exec_cmd("xrdb -merge " .. (os.getenv("HOME") or "") .. "/.Xresources")
     hl.exec_cmd("dbus-update-activation-environment --systemd --all")
     hl.exec_cmd("systemctl --user import-environment "
         .. "WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP XDG_SESSION_TYPE HYPRLAND_INSTANCE_SIGNATURE")

@@ -10,6 +10,8 @@ import "../services"
 SettingsPage {
     id: page
 
+    NProcess { id: sh; function run(cmd) { command = ["sh", "-c", cmd]; running = true; } }
+
     // Named one by one: Config's own notes say a property reached through
     // a built string reads as its default, so no Config[key] here.
     function set(key: string, v: var): void {
@@ -157,6 +159,159 @@ SettingsPage {
             }
         }
 
+    }
+
+    SettingsSection {
+        title: "Keybindings"
+
+        SettingRow {
+            key: "keybinds"
+            label: "Keyboard Shortcuts & Keybinds"
+            hint: "Customise default actions or add your own key combinations"
+            NPillButton {
+                text: "Reload Binds"
+                onActivated: Keybinds.apply()
+            }
+        }
+
+        Repeater {
+            model: Keybinds.coreActions
+
+            Rectangle {
+                id: actionRow
+                required property var modelData
+                Layout.fillWidth: true
+                implicitHeight: Theme.px(38)
+                radius: Theme.r.chip
+                color: Theme.c.surface2
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.px(12)
+                    anchors.rightMargin: Theme.px(10)
+                    spacing: Theme.px(10)
+
+                    NText {
+                        Layout.fillWidth: true
+                        text: actionRow.modelData.label
+                        font.pixelSize: Theme.f.body
+                        elide: Text.ElideRight
+                    }
+
+                    NField {
+                        id: kf
+                        implicitWidth: Theme.px(170)
+                        implicitHeight: Theme.px(26)
+                        text: Keybinds.currentKeyFor(actionRow.modelData.id, actionRow.modelData.defaultKey)
+                        onCommitted: (val) => Keybinds.setOverride(actionRow.modelData.id, val, actionRow.modelData.defaultKey)
+                        onSubmitted: (val) => Keybinds.setOverride(actionRow.modelData.id, val, actionRow.modelData.defaultKey)
+                    }
+
+                    CircleButton {
+                        icon: "󰅖"
+                        size: Theme.px(22)
+                        visible: Keybinds.currentKeyFor(actionRow.modelData.id, actionRow.modelData.defaultKey) !== actionRow.modelData.defaultKey
+                        onActivated: Keybinds.resetOverride(actionRow.modelData.id)
+                    }
+                }
+            }
+        }
+
+        SettingRow {
+            label: "Custom Keybindings"
+            hint: (Config.customKeybinds ?? []).length === 0
+                ? "No custom binds added yet. Add one below:"
+                : "Your custom hotkeys:"
+        }
+
+        Repeater {
+            model: Config.customKeybinds ?? []
+
+            Rectangle {
+                id: customRow
+                required property var modelData
+                required property int index
+                Layout.fillWidth: true
+                implicitHeight: Theme.px(36)
+                radius: Theme.r.tiny
+                color: Theme.c.surface2
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Theme.px(12)
+                    anchors.rightMargin: Theme.px(8)
+                    spacing: Theme.px(10)
+
+                    KeyCap { text: customRow.modelData.key }
+
+                    NText {
+                        Layout.fillWidth: true
+                        text: customRow.modelData.command
+                        color: Theme.c.onDim
+                        elide: Text.ElideRight
+                    }
+
+                    CircleButton {
+                        icon: "󰅖"
+                        size: Theme.px(22)
+                        onActivated: Keybinds.removeCustom(customRow.index)
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            implicitHeight: Theme.px(42)
+            radius: Theme.r.chip
+            color: Theme.c.surface3
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: Theme.px(10)
+                anchors.rightMargin: Theme.px(10)
+                spacing: Theme.px(8)
+
+                NField {
+                    id: addKeyField
+                    implicitWidth: Theme.px(140)
+                    implicitHeight: Theme.px(28)
+                    placeholder: "SUPER + D"
+                }
+
+                NField {
+                    id: addCmdField
+                    Layout.fillWidth: true
+                    implicitHeight: Theme.px(28)
+                    placeholder: "Command (e.g. vesktop)"
+                    onSubmitted: {
+                        if (Keybinds.addCustom(addKeyField.text, addCmdField.text)) {
+                            addKeyField.clear();
+                            addCmdField.clear();
+                        }
+                    }
+                }
+
+                NPillButton {
+                    text: "Add"
+                    onActivated: {
+                        if (Keybinds.addCustom(addKeyField.text, addCmdField.text)) {
+                            addKeyField.clear();
+                            addCmdField.clear();
+                        }
+                    }
+                }
+            }
+        }
+
+        SettingRow {
+            label: "Manual Lua file"
+            hint: "For complex window rules, multi-line gestures or raw Hyprland scripts"
+            NPillButton {
+                text: "Edit custom.lua"
+                onActivated: sh.run("touch ~/.config/hypr/custom.lua && xdg-open ~/.config/hypr/custom.lua")
+            }
+        }
     }
 
     SettingsSection {

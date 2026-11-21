@@ -4,20 +4,29 @@ Automated configuration and dotfiles to reproduce my exact terminal setup and de
 
 ### 🐧 Supported Distributions
 * **Fedora / RHEL / CentOS Stream** (`dnf`)
-* **Ubuntu / Debian / WSL / Pop!_OS** (`apt`)
+* **Ubuntu (24.04 LTS, 24.10+) / Debian / Pop!_OS** (`apt` + `ppa:cppiber/hyprland`)
 * **Arch Linux / Manjaro** (`pacman`)
 
 ---
 
 ## ⚡ Quick Start
 
-### Core Installation:
+### Core Installation (Fedora / Arch / General):
 
 ```bash
 git clone https://github.com/master3716/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
 chmod +x install.sh
 ./install.sh
+```
+
+### Ubuntu Installation (Hyprland Rice & Toolchain):
+
+```bash
+cd ~/.dotfiles
+./install.sh --ubuntu
+# Or directly:
+./install-ubuntu.sh
 ```
 
 Once installed, restart your shell or run:
@@ -37,6 +46,7 @@ cd ~/.dotfiles
 | Command | Action |
 |---|---|
 | `./install.sh` | Installs core dotfiles, shell ecosystem, fonts, modern CLI tools & Ghostty |
+| `./install.sh --ubuntu` (or `-u`) | Full automated installer for Ubuntu (Hyprland stack, PPA, tools, fonts & configs) |
 | `./install.sh --nought` (or `-n`) | Deploys Nought (Nothing OS) desktop rice, themes, icons & configs |
 | `./install.sh --all` (or `-a`) | Full installation (Core environment + Nought rice) |
 | `./install.sh --revert-nought` | Safely reverts Nought themes and restores previous system configuration |
@@ -50,6 +60,9 @@ cd ~/.dotfiles
 ### 1. Shell & Prompts
 * **Zsh** as the default shell with **[Oh My Zsh](https://ohmyz.sh/)**
 * **[Powerlevel10k](https://github.com/romkatv/powerlevel10k)** fast theme (`.p10k.zsh` pre-configured)
+* **Directory Navigation**:
+  * **[zoxide](https://github.com/ajeetdsouza/zoxide)** hooked directly into `cd` (`eval "$(zoxide init zsh --cmd cd)"`) with interactive `cdi` (`zi`) jump
+  * Smart `cdpath` enabled (`cdpath=(. ~ ~/HardDrive)`) allowing quick access across drives and projects
 * **Zsh Plugins**:
   * `zsh-autosuggestions` - Fish-like autosuggestions based on history
   * `zsh-syntax-highlighting` - Fast syntax highlighting for commands
@@ -82,10 +95,18 @@ cd ~/.dotfiles
 * **[zoxide](https://github.com/ajeetdsouza/zoxide)**: Smarter `cd` command tracking frequent directories
 * **[direnv](https://direnv.net/)**: Automatic per-directory environment variables
 * **[lazygit](https://github.com/jesseduffield/lazygit)**: Interactive terminal UI for Git
-* **[zellij](https://zellij.dev/)**: Fast, customizable terminal multiplexer (`zj` alias)
-* **[ghostty](https://ghostty.org/)**: Fast, feature-rich, GPU-accelerated terminal emulator (Tokyo Night theme, non-transparent)
+* **[zellij](https://zellij.dev/)**: Fast, customizable terminal multiplexer (`zj` alias, Tokyo Night theme)
+* **[ghostty](https://ghostty.org/)**: Fast, GPU-accelerated terminal emulator (Tokyo Night theme, non-transparent)
+* **[kitty](https://sw.kovidgoyal.net/kitty/)**: Alternative GPU terminal configured with full Tokyo Night color scheme
 
 ### 3. Desktop Environments & System Integrations
+* **Hyprland Wayland Compositor** (`config/hypr/`):
+  * **Lua Configuration**: Modern Lua-based Hyprland config (`hyprland.lua`, `hyprland/*.lua`)
+  * **Displays**: Dynamic multi-monitor resolution, positioning, scaling, and orientation managed via `displays.lua` (`SUPER + P`)
+  * **Keybindings**: Customized hotkeys, workspace management, and floating windows (`binds.lua`)
+  * **Automounting**: Automatic drive mounting on session startup (`udisksctl mount` for `HardDrive` & `SSD`)
+  * **Cursor Theme**: Standardized `Adwaita` (24px) cursor across Hyprland, GTK 3/4, XWayland, GSettings, and Flatpaks
+  * **Screen Sharing & Portals**: Out-of-the-box PipeWire Wayland screen sharing via `xdg-desktop-portal-hyprland` and `hyprland-share-picker`
 * **GNOME Wayland Configurations** (`config/gnome/`):
   * `dash-to-panel.dconf`: Clean bottom taskbar configuration
   * `dash-to-panel-apps-toggle.patch`: Patch enabling direct app drawer open & close toggle with the `Super` key
@@ -100,6 +121,7 @@ cd ~/.dotfiles
 
 ### 4. Editor (Neovim + LazyVim)
 * **[Neovim](https://neovim.io/)** with **[LazyVim](https://www.lazyvim.org/)** starter
+* **Theme**: Official **Tokyo Night** (`folke/tokyonight.nvim`, `style = "night"`)
 * Language Support & LSP:
   * **Python**: Pyright & Ruff debounced LSP integration
   * **Rust**: `rust-analyzer` with cargo features and clippy check-on-save

@@ -50,6 +50,9 @@ local function loadLua(path)
 end
 
 local hyprConf = (os.getenv("HOME") or "") .. "/.config/hypr"
+if not loadLua(hyprConf .. "/binds.lua") then
+    loadLua(HYPR_DIR .. "/binds.lua")
+end
 if not loadLua(hyprConf .. "/custom.lua") then
     loadLua(HYPR_DIR .. "/custom.lua")
 end
