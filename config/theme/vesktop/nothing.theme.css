@@ -816,11 +816,11 @@ body {
     --button-border: hsl(220, 0%, 100%, 0.1); /* neutral border color of buttons */
 
     /* base colors */
-    --red-1: oklch(75% 0.12 0);
-    --red-2: oklch(70% 0.12 0);
-    --red-3: oklch(65% 0.12 0);
-    --red-4: oklch(60% 0.12 0);
-    --red-5: oklch(55% 0.12 0);
+    --red-1: #ff525a;
+    --red-2: #e5323c;
+    --red-3: #d71921;
+    --red-4: #b01319;
+    --red-5: #8c0d12;
 
     --green-1: oklch(75% 0.11 170);
     --green-2: oklch(70% 0.11 170);
@@ -2429,11 +2429,11 @@ body {
     --button-border: hsl(220, 0%, 100%, 0.1); /* neutral border color of buttons */
 
     /* base colors */
-    --red-1: oklch(75% 0.13 0);
-    --red-2: oklch(70% 0.13 0);
-    --red-3: oklch(65% 0.13 0);
-    --red-4: oklch(60% 0.13 0);
-    --red-5: oklch(55% 0.13 0);
+    --red-1: #ff525a;
+    --red-2: #e5323c;
+    --red-3: #d71921;
+    --red-4: #b01319;
+    --red-5: #8c0d12;
 
     --green-1: oklch(75% 0.12 170);
     --green-2: oklch(70% 0.12 170);
@@ -3058,6 +3058,22 @@ body {
     --accent-4: #e5323c;
     --accent-5: #b01319;
     --accent-new: #d71921;
+
+    /* Bold, rich Nothing / Discord red without pink/magenta hue */
+    --red-1: #ff525a;
+    --red-2: #e5323c;
+    --red-3: #d71921;
+    --red-4: #b01319;
+    --red-5: #8c0d12;
+
+    --status-danger: #d71921;
+    --status-danger-background: #d71921;
+    --button-danger-background: #d71921;
+    --button-danger-background-hover: #e5323c;
+    --button-danger-background-active: #b01319;
+    --control-critical-primary-background-default: #d71921;
+    --control-critical-primary-background-hover: #e5323c;
+    --control-critical-primary-background-active: #b01319;
     --mention: linear-gradient(to right, color-mix(in hsl, var(--accent-2), transparent 90%) 40%, transparent);
     --mention-hover: linear-gradient(to right, color-mix(in hsl, var(--accent-2), transparent 95%) 40%, transparent);
     --reply: linear-gradient(to right, color-mix(in hsl, var(--text-3), transparent 90%) 40%, transparent);
@@ -3160,4 +3176,23 @@ time {
  * fights the engine's !important to get there. */
 [role="textbox"] {
     border-radius: 999px !important;
+}
+
+/* Voice disconnect button and critical danger controls - rich vibrant red */
+.colorable_f1ceac.red_f1ceac,
+button[aria-label*="Disconnect"],
+[aria-label="Disconnect"] {
+    background-color: #d71921 !important;
+    color: #ffffff !important;
+}
+.colorable_f1ceac.red_f1ceac:hover,
+button[aria-label*="Disconnect"]:hover,
+[aria-label="Disconnect"]:hover {
+    background-color: #e5323c !important;
+    color: #ffffff !important;
+}
+.colorable_f1ceac.red_f1ceac:active,
+button[aria-label*="Disconnect"]:active,
+[aria-label="Disconnect"]:active {
+    background-color: #b01319 !important;
 }
