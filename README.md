@@ -3,30 +3,25 @@
 Automated configuration and dotfiles to reproduce my exact terminal setup and desktop environment on any fresh machine.
 
 ### 🐧 Supported Distributions
-* **Fedora / RHEL / CentOS Stream** (`dnf`)
+* **Arch Linux / Manjaro** (`pacman` + `yay`/`paru` for AUR)
+* **Fedora / RHEL / CentOS Stream** (`dnf` + Copr)
 * **Ubuntu (24.04 LTS, 24.10+) / Debian / Pop!_OS** (`apt` + `ppa:cppiber/hyprland`)
-* **Arch Linux / Manjaro** (`pacman`)
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Quick Start (One-Command Setup)
 
-### Core Installation (Fedora / Arch / General):
+To set up a fresh machine with everything (Shell, Neovim, Ghostty, Hyprland desktop rice, Flatpaks, themes, and apps):
 
 ```bash
-git clone https://github.com/master3716/dotfiles.git ~/.dotfiles
+git clone -b nought https://github.com/master3716/dotfiles.git ~/.dotfiles
 cd ~/.dotfiles
-chmod +x install.sh
 ./install.sh
 ```
 
-### Ubuntu Installation (Hyprland Rice & Toolchain):
-
+Or run directly via `curl`:
 ```bash
-cd ~/.dotfiles
-./install.sh --ubuntu
-# Or directly:
-./install-ubuntu.sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/master3716/dotfiles/nought/install.sh)"
 ```
 
 Once installed, restart your shell or run:
@@ -34,21 +29,14 @@ Once installed, restart your shell or run:
 exec zsh
 ```
 
-### Full Installation with Nought (Nothing OS Rice):
-
-```bash
-cd ~/.dotfiles
-./install.sh --all
-```
-
 ### Installer Options:
 
 | Command | Action |
 |---|---|
-| `./install.sh` | Installs core dotfiles, shell ecosystem, fonts, modern CLI tools & Ghostty |
-| `./install.sh --ubuntu` (or `-u`) | Full automated installer for Ubuntu (Hyprland stack, PPA, tools, fonts & configs) |
-| `./install.sh --nought` (or `-n`) | Deploys Nought (Nothing OS) desktop rice, themes, icons & configs |
-| `./install.sh --all` (or `-a`) | Full installation (Core environment + Nought rice) |
+| `./install.sh` | **Full One-Command Setup**: Deploys dotfiles, installs system & AUR packages, fonts, Ghostty, Flatpaks (Vesktop, Zen, ZapZap, Spotify), and Nought (Nothing OS) desktop rice |
+| `./install.sh --core-only` | Installs CLI dotfiles, Zsh ecosystem, fonts, and terminal tools only (skips desktop rice and flatpaks) |
+| `./install.sh --no-flatpak` | Installs everything except Flatpak applications |
+| `./install.sh --ubuntu` (or `-u`) | Runs Ubuntu-specific script (`install-ubuntu.sh`) |
 | `./install.sh --revert-nought` | Safely reverts Nought themes and restores previous system configuration |
 | `./revert-nought.sh` | Standalone one-click reverter script for Nought |
 | `./install.sh --help` | Displays command line usage and flags |
@@ -58,6 +46,37 @@ cd ~/.dotfiles
 ## 🧰 What's Included
 
 ### 1. Shell & Prompts
+* **Zsh** as the default shell with **[Oh My Zsh](https://ohmyz.sh/)**
+* **[Powerlevel10k](https://github.com/romkatv/powerlevel10k)** fast theme (`.p10k.zsh` pre-configured)
+* **Directory Navigation**:
+  * **[zoxide](https://github.com/ajeetdsouza/zoxide)** hooked directly into `cd` (`eval "$(zoxide init zsh --cmd cd)"`) with interactive `cdi` (`zi`) jump
+  * Smart `cdpath` enabled (`cdpath=(. ~ ~/HardDrive)`) allowing quick access across drives and projects
+* **Zsh Plugins**:
+  * `zsh-autosuggestions` - Fish-like autosuggestions based on history
+  * `zsh-syntax-highlighting` - Fast syntax highlighting for commands (valid commands highlight green, paths cyan, flags yellow, invalid tokens red)
+  * `fzf-tab` - FZF-powered tab completion preview
+  * `git`, `vi-mode`, `colored-man-pages`, `command-not-found`, `extract`, `history`, `sudo`
+* **Vi Mode**:
+  * Escape with `jj` in insert mode
+  * Low key-timeout for responsive switching
+* **Custom Aliases**:
+  * `pipi` -> `pip install`
+  * `python` -> `python3`
+  * `zj` -> `zellij`
+  * `cls` -> `clear`
+  * `h` -> `history`, `j` -> `jobs`
+  * `agy` -> `agy --dangerously-skip-permissions` (Antigravity CLI)
+
+### 2. Applications & Desktop Stack
+* **[Ghostty](https://ghostty.org/)**: Fast GPU-accelerated terminal configured with matte black (`#0b0b0b`) background, Tokyo Night accents, and crisp green syntax coloring for shell commands.
+* **[Neovim](https://neovim.io/) (LazyVim)**: Full IDE experience with LSP, Treesitter, Tokyo Night palette, customized calm slate borders, and natural syntax highlighting.
+* **[Vesktop](https://github.com/Vencord/Vesktop)**: Discord client pre-configured with Vencord plugins, Nothing OS Red (`#d71921`) call-disconnect accents, rounded corners, and official Discord SVG icon.
+* **[Zen Browser](https://zen-browser.app/)**: Modern Firefox-based browser with automated launcher wrapper.
+* **[ZapZap](https://github.com/rtosta/zapzap)**: WhatsApp desktop client with system tray integration.
+* **[Hyprland](https://hyprland.org/) & [Quickshell](https://quickshell.outfoxxed.me/) (Nought Rice)**: Nothing OS desktop experience featuring dynamic widgets, dock, control center, and status bar.
+* **Dual-Language Input (English + Hebrew)**:
+  * Switching shortcuts: `Alt + Shift` (or `Shift + Alt`), and `Super + Shift + Space` (keeping `Super + Space` dedicated to the app launcher).
+  * Interactive top bar indicator (`󰌌 EN` / `󰌌 HE`): Highlights `HE` in Nothing Red when Hebrew is active; click to switch.
 * **Zsh** as the default shell with **[Oh My Zsh](https://ohmyz.sh/)**
 * **[Powerlevel10k](https://github.com/romkatv/powerlevel10k)** fast theme (`.p10k.zsh` pre-configured)
 * **Directory Navigation**:
@@ -224,7 +243,10 @@ git checkout main && git merge nought
 ├── bin/
 │   ├── dbfetch                 # Dragon Ball interactive terminal fetch (Fastfetch powered)
 │   ├── neofetch                # Neofetch system info tool
-│   └── steam                   # Steam bwrap SSL certificate compatibility wrapper
+│   ├── steam                   # Steam bwrap SSL certificate compatibility wrapper
+│   ├── vesktop                 # Vesktop Discord Flatpak launcher wrapper
+│   ├── zen / zen-browser       # Zen Browser Flatpak launcher wrapper
+│   └── zap / zapzap            # ZapZap WhatsApp Flatpak launcher wrapper
 ├── applications/               # Desktop application entries (Nothing X, servicemenus)
 ├── assets/                     # Rice wallpapers, logos, and UI assets
 ├── icons/                      # Custom app icons and SVG vectors
@@ -244,7 +266,9 @@ git checkout main && git merge nought
     ├── gnome/                 # GNOME Dash to panel, Mutter, and keybinding dconfs
     ├── gtk-3.0/               # GTK 3 Nothing matte black + red theme
     ├── gtk-4.0/               # GTK 4 Nothing matte black + red theme
-    ├── hypr/                  # Hyprland Lua configuration & keybinds
+    ├── hypr/                  # Hyprland Lua configuration & keybinds (Hebrew dual-layout)
+    ├── nothing/
+    │   └── config.json        # Nothing OS user settings, keybind overrides, bar layout
     ├── nvim/                  # Neovim (LazyVim) configuration
     │   ├── init.lua
     │   ├── lazyvim.json
@@ -252,13 +276,15 @@ git checkout main && git merge nought
     │   ├── stylua.toml
     │   └── lua/
     │       ├── config/        # Autocmds, keymaps, lazy setup, options
-    │       └── plugins/       # Custom language LSPs, explorer, and toggleterm
+    │       └── plugins/       # Custom theme, LSP, explorer, and toggleterm
     ├── ptyxis/                # Ptyxis Tokyo Night palette
     ├── quickshell/            # Quickshell Nothing OS desktop & widget UI
     ├── scripts/               # Desktop helper scripts (lock, screenshot, etc.)
     ├── starship.toml          # Starship Nothing prompt configuration
     ├── steam/                 # Custom Steam desktop entry
     ├── theme/                 # GTK, KDE, Icon, Spicetify, Vesktop & Zen themes
+    ├── vesktop/               # Vesktop settings, Vencord config & Nothing theme
+    ├── zapzap/                # ZapZap WhatsApp client configuration
     └── zellij/
         └── config.kdl         # Zellij custom layout & keybind configuration
 ```

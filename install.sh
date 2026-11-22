@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Dotfiles Installer & System Setup
-# Multi-distro support: Fedora / RHEL, Ubuntu / Debian / WSL, Arch Linux
+# Multi-distro support: Arch Linux, Fedora / RHEL, Ubuntu / Debian / WSL
+# One-command complete workstation setup: Shell, Hyprland, Rice, Flatpaks & Tools
 # ==============================================================================
+set -e
 
 # Text colors
 RED='\033[0;31m'
@@ -42,13 +44,13 @@ if [ ! -f "${SCRIPT_DIR}/zsh/.zshrc" ]; then
         log_info "Updating existing ~/.dotfiles repo..."
         git -C "$HOME/.dotfiles" pull --rebase || true
     else
-        git clone https://github.com/master3716/dotfiles.git "$HOME/.dotfiles"
+        git clone -b nought https://github.com/master3716/dotfiles.git "$HOME/.dotfiles" 2>/dev/null || \
+            git clone https://github.com/master3716/dotfiles.git "$HOME/.dotfiles"
     fi
     SCRIPT_DIR="$HOME/.dotfiles"
 fi
 
 DOTFILES_DIR="$SCRIPT_DIR"
-log_info "Using dotfiles from: ${DOTFILES_DIR}"
 
 # Ensure ~/.local/bin and standard paths are in PATH
 mkdir -p "$HOME/.local/bin" "$HOME/bin"
@@ -86,34 +88,80 @@ link_file() {
 deploy_configs() {
     log_info "Deploying dotfiles and configuration files..."
 
+    local CONF="${XDG_CONFIG_HOME:-$HOME/.config}"
+    local DATA="${XDG_DATA_HOME:-$HOME/.local/share}"
+
     # Zsh configs
     link_file "${DOTFILES_DIR}/zsh/.zshrc" "$HOME/.zshrc"
     link_file "${DOTFILES_DIR}/zsh/.zshenv" "$HOME/.zshenv"
     link_file "${DOTFILES_DIR}/zsh/.p10k.zsh" "$HOME/.p10k.zsh"
 
     # Zellij config
-    link_file "${DOTFILES_DIR}/config/zellij/config.kdl" "$HOME/.config/zellij/config.kdl"
+    link_file "${DOTFILES_DIR}/config/zellij/config.kdl" "${CONF}/zellij/config.kdl"
 
     # Neovim (LazyVim starter + custom plugins)
-    link_file "${DOTFILES_DIR}/config/nvim" "$HOME/.config/nvim"
-
-    # Neofetch & Dragon Ball fetch
-    mkdir -p "$HOME/.local/bin" "$HOME/.local/share/dragonball-neofetch" "$HOME/.local/share/applications"
-    link_file "${DOTFILES_DIR}/bin/neofetch" "$HOME/.local/bin/neofetch"
-    link_file "${DOTFILES_DIR}/bin/dbfetch" "$HOME/.local/bin/dbfetch"
-    link_file "${DOTFILES_DIR}/bin/steam" "$HOME/.local/bin/steam"
-    link_file "${DOTFILES_DIR}/config/steam/steam.desktop" "$HOME/.local/share/applications/steam.desktop"
-    link_file "${DOTFILES_DIR}/data/dragonball/ascii" "$HOME/.local/share/dragonball-neofetch/ascii"
-    link_file "${DOTFILES_DIR}/data/dragonball/manifest.json" "$HOME/.local/share/dragonball-neofetch/manifest.json"
-
-    # Ptyxis Terminal Palettes
-    mkdir -p "$HOME/.local/share/org.gnome.Ptyxis/palettes"
-    link_file "${DOTFILES_DIR}/config/ptyxis/palettes/tokyo-night.palette" "$HOME/.local/share/org.gnome.Ptyxis/palettes/tokyo-night.palette"
+    link_file "${DOTFILES_DIR}/config/nvim" "${CONF}/nvim"
 
     # Ghostty Terminal Config
-    link_file "${DOTFILES_DIR}/config/ghostty/config" "$HOME/.config/ghostty/config"
+    link_file "${DOTFILES_DIR}/config/ghostty/config" "${CONF}/ghostty/config"
 
-    # GNOME Dash to Panel & Desktop Settings
+    # CLI Executables & Wrappers
+    mkdir -p "$HOME/.local/bin" "$DATA/dragonball-neofetch" "$DATA/applications"
+    for bin_file in "${DOTFILES_DIR}/bin"/*; do
+        [ -e "$bin_file" ] || continue
+        local bname
+        bname="$(basename "$bin_file")"
+        link_file "$bin_file" "$HOME/.local/bin/$bname"
+    done
+
+    # Steam wrapper & desktop file
+    link_file "${DOTFILES_DIR}/config/steam/steam.desktop" "$DATA/applications/steam.desktop"
+
+    # Dragon Ball fetch data
+    link_file "${DOTFILES_DIR}/data/dragonball/ascii" "$DATA/dragonball-neofetch/ascii"
+    link_file "${DOTFILES_DIR}/data/dragonball/manifest.json" "$DATA/dragonball-neofetch/manifest.json"
+
+    # Ptyxis Terminal Palettes
+    mkdir -p "$DATA/org.gnome.Ptyxis/palettes"
+    link_file "${DOTFILES_DIR}/config/ptyxis/palettes/tokyo-night.palette" "$DATA/org.gnome.Ptyxis/palettes/tokyo-night.palette"
+
+    # Nothing OS Desktop Shell Config
+    if [ -f "${DOTFILES_DIR}/config/nothing/config.json" ]; then
+        mkdir -p "${CONF}/nothing"
+        if [ ! -f "${CONF}/nothing/config.json" ]; then
+            cp "${DOTFILES_DIR}/config/nothing/config.json" "${CONF}/nothing/config.json"
+            log_success "Created ${CONF}/nothing/config.json"
+        fi
+    fi
+
+    # Vesktop App Configurations
+    if [ -d "${DOTFILES_DIR}/config/vesktop" ]; then
+        local HOST_VESKTOP="${CONF}/vesktop"
+        local FLATPAK_VESKTOP="$HOME/.var/app/dev.vencord.Vesktop/config/vesktop"
+
+        mkdir -p "$FLATPAK_VESKTOP/settings" "$FLATPAK_VESKTOP/themes"
+
+        [ -f "${DOTFILES_DIR}/config/vesktop/settings.json" ] && [ ! -f "$FLATPAK_VESKTOP/settings.json" ] && \
+            cp "${DOTFILES_DIR}/config/vesktop/settings.json" "$FLATPAK_VESKTOP/settings.json"
+        [ -f "${DOTFILES_DIR}/config/vesktop/settings/settings.json" ] && [ ! -f "$FLATPAK_VESKTOP/settings/settings.json" ] && \
+            cp "${DOTFILES_DIR}/config/vesktop/settings/settings.json" "$FLATPAK_VESKTOP/settings/settings.json"
+        [ -f "${DOTFILES_DIR}/config/vesktop/themes/nothing.theme.css" ] && \
+            cp -f "${DOTFILES_DIR}/config/vesktop/themes/nothing.theme.css" "$FLATPAK_VESKTOP/themes/nothing.theme.css"
+
+        if [ ! -e "$HOST_VESKTOP" ] && [ ! -L "$HOST_VESKTOP" ]; then
+            ln -s "$FLATPAK_VESKTOP" "$HOST_VESKTOP" 2>/dev/null || true
+        fi
+    fi
+
+    # ZapZap Config
+    if [ -f "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" ]; then
+        local FLATPAK_ZAP="$HOME/.var/app/com.rtosta.zapzap/config/ZapZap"
+        mkdir -p "$FLATPAK_ZAP" "${CONF}/ZapZap"
+        [ ! -f "$FLATPAK_ZAP/ZapZap.conf" ] && cp "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" "$FLATPAK_ZAP/ZapZap.conf" 2>/dev/null || true
+        [ ! -f "${CONF}/ZapZap/ZapZap.conf" ] && cp "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" "${CONF}/ZapZap/ZapZap.conf" 2>/dev/null || true
+    fi
+
+    # GNOME Dash to Panel & Desktop Settings (if dconf exists)
     if has_cmd dconf; then
         [ -f "${DOTFILES_DIR}/config/gnome/dash-to-panel.dconf" ] && dconf load /org/gnome/shell/extensions/dash-to-panel/ < "${DOTFILES_DIR}/config/gnome/dash-to-panel.dconf" 2>/dev/null || true
         [ -f "${DOTFILES_DIR}/config/gnome/shell-keybindings.dconf" ] && dconf load /org/gnome/shell/keybindings/ < "${DOTFILES_DIR}/config/gnome/shell-keybindings.dconf" 2>/dev/null || true
@@ -137,7 +185,6 @@ deploy_configs() {
 install_zsh_ecosystem() {
     log_info "Setting up Oh My Zsh, Powerlevel10k, and plugins..."
 
-    # Direct git clone of Oh My Zsh (fast, reliable, no prompt conflicts)
     if [ ! -d "$HOME/.oh-my-zsh" ]; then
         log_info "Cloning Oh My Zsh..."
         git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh" || log_warn "Could not clone Oh My Zsh."
@@ -206,80 +253,82 @@ install_meslo_font() {
 }
 
 # ------------------------------------------------------------------------------
-# 4. System Packages (APT / DNF / Pacman)
+# 4. System Packages (Arch Linux, Fedora / RHEL, Debian / Ubuntu)
 # ------------------------------------------------------------------------------
 install_system_packages() {
-    if has_cmd dnf; then
-        log_info "Detected Fedora / RHEL (dnf). Installing packages..."
-        local fedora_pkgs=(
-            zsh
-            git
-            curl
-            wget
-            unzip
-            ripgrep
-            fd-find
-            bat
-            fzf
-            tree
-            jq
-            tmux
-            python3
-            python3-pip
-            pipx
-            direnv
-            gcc
-            gcc-c++
-            make
-            cmake
-            fontconfig
-            util-linux-user
-        )
-        # Use --setopt=strict=0 and --skip-broken so unavailable optional packages do not abort installation
-        sudo dnf install -y --setopt=strict=0 --skip-broken "${fedora_pkgs[@]}" || log_warn "Some core dnf packages failed to install."
+    if has_cmd pacman; then
+        log_info "Detected Arch Linux (pacman). Updating package databases and installing packages..."
+        sudo pacman -Sy --noconfirm 2>/dev/null || true
 
-        # Try installing optional packages individually
-        sudo dnf install -y --setopt=strict=0 --skip-broken eza 2>/dev/null || true
-        sudo dnf install -y --setopt=strict=0 --skip-broken ShellCheck 2>/dev/null || sudo dnf install -y --setopt=strict=0 --skip-broken shellcheck 2>/dev/null || true
-        sudo dnf install -y --setopt=strict=0 --skip-broken fd 2>/dev/null || true
+        local arch_pkgs=(
+            # Build essentials & core
+            base-devel git zsh curl wget unzip tar tree jq tmux cmake fontconfig direnv shellcheck
+            # Python ecosystem
+            python python-pip python-pipx python-pillow python-numpy
+            # Modern CLI replacements
+            ripgrep fd bat fzf eza zoxide zellij lazygit fastfetch starship neovim
+            # Hyprland & Wayland stack
+            hyprland hypridle hyprlock hyprpicker hyprsunset
+            xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+            # Audio & PipeWire stack
+            pipewire wireplumber pipewire-pulse pipewire-alsa pipewire-jack pavucontrol playerctl
+            # Desktop utilities & media
+            brightnessctl wl-clipboard cliphist grim slurp swappy wf-recorder zenity dconf chafa ffmpeg mpv nautilus
+            # Polkit
+            polkit-kde-agent
+            # Fonts
+            noto-fonts noto-fonts-emoji noto-fonts-cjk ttf-font-awesome ttf-inter
+            # Flatpak
+            flatpak
+        )
+        sudo pacman -S --noconfirm --needed "${arch_pkgs[@]}" || log_warn "Some pacman packages failed to install."
+
+    elif has_cmd dnf; then
+        log_info "Detected Fedora / RHEL (dnf). Configuring repositories..."
+
+        # Enable Coprs for Hyprland, Quickshell, and Ghostty
+        if has_cmd sudo; then
+            sudo dnf copr enable -y ashbuk/Hyprland-Fedora 2>/dev/null || true
+            sudo dnf copr enable -y errornointernet/quickshell 2>/dev/null || true
+            sudo dnf copr enable -y scottames/ghostty 2>/dev/null || true
+        fi
+
+        local fedora_pkgs=(
+            # Shell, build tools, essentials
+            zsh git curl wget unzip tar ripgrep fd-find bat fzf tree jq tmux
+            python3 python3-pip python3-pillow python3-numpy pipx direnv
+            gcc gcc-c++ make cmake fontconfig util-linux-user eza shellcheck flatpak
+            # Hyprland & Quickshell
+            hyprland hypridle hyprlock quickshell
+            xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+            # Audio & utilities
+            pipewire wireplumber pavucontrol playerctl brightnessctl
+            wl-clipboard cliphist grim slurp swappy wf-recorder zenity dconf chafa ffmpeg mpv nautilus
+        )
+        sudo dnf install -y --setopt=strict=0 --skip-broken "${fedora_pkgs[@]}" || log_warn "Some core dnf packages failed to install."
 
     elif has_cmd apt-get; then
         log_info "Detected Debian / Ubuntu (apt). Updating package list..."
         sudo apt-get update -y || true
 
+        # Hyprland PPA for modern builds if available
+        if has_cmd add-apt-repository && ! grep -rq "cppiber/hyprland" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
+            sudo add-apt-repository -y ppa:cppiber/hyprland 2>/dev/null || true
+            sudo apt-get update -qq || true
+        fi
+
         local deb_pkgs=(
-            zsh
-            git
-            curl
-            wget
-            unzip
-            build-essential
-            ripgrep
-            fd-find
-            bat
-            fzf
-            tree
-            jq
-            tmux
-            python3
-            python3-pip
-            python3-venv
-            pipx
-            shellcheck
-            direnv
-            gcc
-            g++
-            make
-            cmake
-            fontconfig
+            zsh git curl wget unzip tar build-essential ripgrep fd-find bat fzf tree jq tmux
+            python3 python3-pip python3-venv python3-pil python3-numpy pipx shellcheck direnv
+            gcc g++ make cmake fontconfig flatpak
+            hyprland hypridle hyprlock xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+            pipewire pipewire-pulse wireplumber pavucontrol playerctl brightnessctl
+            wl-clipboard cliphist grim slurp
         )
+        sudo apt-get install -y --no-install-recommends "${deb_pkgs[@]}" || log_warn "Some apt packages failed to install."
 
-        log_info "Installing core system packages..."
-        sudo apt-get install -y "${deb_pkgs[@]}" || log_warn "Some apt packages failed to install."
-
-        # Setup eza repo if not already installed
+        # Setup eza repo if missing
         if ! has_cmd eza; then
-            log_info "Configuring eza package repository..."
             sudo mkdir -p /etc/apt/keyrings
             if wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/gierens.gpg 2>/dev/null; then
                 echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null
@@ -288,40 +337,53 @@ install_system_packages() {
                 sudo apt-get install -y eza 2>/dev/null || true
             fi
         fi
-
-    elif has_cmd pacman; then
-        log_info "Detected Arch Linux (pacman). Installing packages..."
-        local arch_pkgs=(
-            zsh
-            git
-            curl
-            wget
-            unzip
-            base-devel
-            ripgrep
-            fd
-            bat
-            fzf
-            tree
-            jq
-            tmux
-            python
-            python-pip
-            python-pipx
-            shellcheck
-            direnv
-            cmake
-            eza
-            fontconfig
-        )
-        sudo pacman -S --noconfirm --needed "${arch_pkgs[@]}" || log_warn "Some pacman packages failed to install."
     else
-        log_warn "No recognized package manager (dnf, apt-get, pacman) found. Please install core packages manually."
+        log_warn "No recognized package manager (pacman, dnf, apt-get) found. Please install core packages manually."
     fi
 }
 
 # ------------------------------------------------------------------------------
-# 4. Modern CLI Utilities
+# 5. Arch Linux AUR Setup (Quickshell, Ghostty)
+# ------------------------------------------------------------------------------
+install_arch_aur() {
+    if ! has_cmd pacman; then
+        return 0
+    fi
+
+    log_info "Checking Arch Linux AUR packages (Quickshell, Ghostty)..."
+
+    local aur_cmd=""
+    if has_cmd yay; then
+        aur_cmd="yay"
+    elif has_cmd paru; then
+        aur_cmd="paru"
+    else
+        log_info "No AUR helper found. Bootstrapping yay-bin from AUR..."
+        local tmpdir="/tmp/yay-bin"
+        rm -rf "$tmpdir"
+        if git clone https://aur.archlinux.org/yay-bin.git "$tmpdir" 2>/dev/null; then
+            (cd "$tmpdir" && makepkg -si --noconfirm) || log_warn "Could not build yay-bin automatically."
+            rm -rf "$tmpdir"
+            has_cmd yay && aur_cmd="yay"
+        fi
+    fi
+
+    if [ -n "$aur_cmd" ]; then
+        if ! has_cmd quickshell; then
+            log_info "Installing quickshell from AUR ($aur_cmd)..."
+            $aur_cmd -S --noconfirm --needed quickshell-git 2>/dev/null || $aur_cmd -S --noconfirm --needed quickshell 2>/dev/null || log_warn "Quickshell AUR installation failed."
+        fi
+        if ! has_cmd ghostty; then
+            log_info "Installing ghostty from AUR ($aur_cmd)..."
+            $aur_cmd -S --noconfirm --needed ghostty 2>/dev/null || $aur_cmd -S --noconfirm --needed ghostty-bin 2>/dev/null || true
+        fi
+    else
+        log_warn "No AUR helper available. Please install 'quickshell-git' and 'ghostty' manually from the Arch User Repository."
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# 6. Modern CLI Utilities (Standalones & Fallbacks)
 # ------------------------------------------------------------------------------
 install_modern_tools() {
     local ARCH
@@ -384,7 +446,7 @@ install_modern_tools() {
         fi
     fi
 
-    # Neovim (Latest official prebuilt release)
+    # Neovim (Ensure version >= 0.10)
     local NEED_NVIM=0
     if ! has_cmd nvim; then
         NEED_NVIM=1
@@ -435,14 +497,10 @@ install_modern_tools() {
         # shellcheck source=/dev/null
         . "$HOME/.cargo/env"
     fi
-    if has_cmd rustup; then
-        log_info "Configuring Rust components (rust-src, rust-analyzer, clippy, rustfmt)..."
-        rustup component add rust-src rust-analyzer clippy rustfmt >/dev/null 2>&1 || true
-    fi
 }
 
 # ------------------------------------------------------------------------------
-# 5. Ghostty Terminal Emulator
+# 7. Ghostty Terminal Emulator
 # ------------------------------------------------------------------------------
 install_ghostty() {
     if has_cmd ghostty || [ -f "$HOME/.local/bin/ghostty" ]; then
@@ -452,14 +510,18 @@ install_ghostty() {
 
     log_info "Installing Ghostty terminal emulator..."
 
-    if has_cmd dnf; then
+    if has_cmd pacman; then
+        if has_cmd sudo; then
+            sudo pacman -S --noconfirm --needed ghostty 2>/dev/null || true
+        fi
+        if ! has_cmd ghostty && (has_cmd yay || has_cmd paru); then
+            local aur_cmd="yay"; has_cmd paru && aur_cmd="paru"
+            $aur_cmd -S --noconfirm --needed ghostty 2>/dev/null || $aur_cmd -S --noconfirm --needed ghostty-bin 2>/dev/null || true
+        fi
+    elif has_cmd dnf; then
         if has_cmd sudo; then
             sudo dnf copr enable -y scottames/ghostty 2>/dev/null || true
             sudo dnf install -y ghostty 2>/dev/null || true
-        fi
-    elif has_cmd pacman; then
-        if has_cmd sudo; then
-            sudo pacman -S --noconfirm --needed ghostty 2>/dev/null || true
         fi
     elif has_cmd apt-get; then
         if has_cmd sudo; then
@@ -483,7 +545,66 @@ install_ghostty() {
 }
 
 # ------------------------------------------------------------------------------
-# 6. Set Default Shell to Zsh
+# 8. Flatpak Desktop Applications (Vesktop, Zen, ZapZap, Spotify, etc.)
+# ------------------------------------------------------------------------------
+install_flatpaks() {
+    log_info "Configuring Flatpak and core desktop applications..."
+
+    if ! has_cmd flatpak; then
+        log_warn "Flatpak is not installed. Skipping flatpak app installations."
+        return 0
+    fi
+
+    # Add Flathub remote
+    sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || \
+        flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+
+    local flatpak_apps=(
+        dev.vencord.Vesktop
+        app.zen_browser.zen
+        com.rtosta.zapzap
+        com.spotify.Client
+        com.stremio.Stremio
+        com.discordapp.Discord
+        io.github.Foldex.AdwSteamGtk
+        org.prismlauncher.PrismLauncher
+    )
+
+    for app in "${flatpak_apps[@]}"; do
+        if ! flatpak info "$app" >/dev/null 2>&1; then
+            log_info "Installing Flatpak: $app..."
+            flatpak install -y --noninteractive flathub "$app" 2>/dev/null || \
+                flatpak install --user -y --noninteractive flathub "$app" 2>/dev/null || \
+                log_warn "Could not install $app."
+        else
+            log_info "Flatpak $app is already installed."
+        fi
+    done
+
+    # Ensure application configuration directories exist and deploy configs
+    local VESKTOP_DIR="$HOME/.var/app/dev.vencord.Vesktop/config/vesktop"
+    mkdir -p "$VESKTOP_DIR/themes" "$VESKTOP_DIR/settings" "$HOME/.config/vesktop"
+    if [ -f "${DOTFILES_DIR}/config/vesktop/settings.json" ]; then
+        [ ! -f "$VESKTOP_DIR/settings.json" ] && cp "${DOTFILES_DIR}/config/vesktop/settings.json" "$VESKTOP_DIR/settings.json" 2>/dev/null || true
+    fi
+    if [ -f "${DOTFILES_DIR}/config/vesktop/settings/settings.json" ]; then
+        [ ! -f "$VESKTOP_DIR/settings/settings.json" ] && cp "${DOTFILES_DIR}/config/vesktop/settings/settings.json" "$VESKTOP_DIR/settings/settings.json" 2>/dev/null || true
+    fi
+    if [ -f "${DOTFILES_DIR}/config/vesktop/themes/nothing.theme.css" ]; then
+        cp -f "${DOTFILES_DIR}/config/vesktop/themes/nothing.theme.css" "$VESKTOP_DIR/themes/nothing.theme.css" 2>/dev/null || true
+    fi
+
+    # ZapZap Config
+    local ZAPZAP_DIR="$HOME/.var/app/com.rtosta.zapzap/config/ZapZap"
+    mkdir -p "$ZAPZAP_DIR" "$HOME/.config/ZapZap"
+    if [ -f "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" ]; then
+        [ ! -f "$ZAPZAP_DIR/ZapZap.conf" ] && cp "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" "$ZAPZAP_DIR/ZapZap.conf" 2>/dev/null || true
+        [ ! -f "$HOME/.config/ZapZap/ZapZap.conf" ] && cp "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" "$HOME/.config/ZapZap/ZapZap.conf" 2>/dev/null || true
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# 9. Set Default Shell to Zsh
 # ------------------------------------------------------------------------------
 set_default_shell() {
     if ! has_cmd zsh; then
@@ -496,7 +617,6 @@ set_default_shell() {
 
     if [ "${SHELL:-}" != "$ZSH_PATH" ]; then
         log_info "Setting default shell to ${ZSH_PATH}..."
-        # Try standard chsh first
         if chsh -s "$ZSH_PATH" 2>/dev/null; then
             log_success "Default shell changed to Zsh via chsh."
         elif has_cmd sudo && sudo usermod -s "$ZSH_PATH" "$USER" 2>/dev/null; then
@@ -508,7 +628,7 @@ set_default_shell() {
 }
 
 # ------------------------------------------------------------------------------
-# 7. Nought (Nothing OS) Rice & Theme Integration
+# 10. Nought (Nothing OS) Rice & Theme Integration
 # ------------------------------------------------------------------------------
 deploy_nought() {
     log_info "Deploying Nought (Nothing OS) Rice & Theme..."
@@ -533,7 +653,7 @@ EOF
         log_info "Saved current theme settings to ${BACKUP_ENV}"
     fi
 
-    # OS Theme Decisions (Rule: Stick with repo's version for OS theme)
+    # OS Theme Decisions
     log_info "Applying Nothing OS theme (GTK, Qt/KDE, Icons, Fonts)..."
 
     # GTK 3 & GTK 4
@@ -571,7 +691,7 @@ EOF
     link_file "${DOTFILES_DIR}/config/fontconfig" "${CONF}/fontconfig"
     has_cmd fc-cache && fc-cache -f "${CONF}/fontconfig" 2>/dev/null || true
 
-    # GNOME Theme via gsettings
+    # GNOME Theme via gsettings (if running GNOME)
     if has_cmd gsettings; then
         gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
         gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
@@ -609,7 +729,6 @@ EOF
     has_cmd update-desktop-database && update-desktop-database "${DATA}/applications" 2>/dev/null || true
 
     log_success "Nought (Nothing OS) Rice & Theme deployed successfully!"
-    log_info "To revert at any time, run: ./revert-nought.sh (or ./install.sh --revert-nought)"
 }
 
 revert_nought() {
@@ -624,17 +743,29 @@ show_help() {
     cat <<'EOF'
 Usage: ./install.sh [OPTION]
 
-Dotfiles installer with multi-distro and Nought (Nothing OS) rice support.
+One-command Dotfiles, Hyprland rice, and desktop application installer.
+Supports Arch Linux, Fedora, and Debian / Ubuntu.
+
+By default (with no options), runs the complete setup:
+  - Deploys dotfiles & symlinks
+  - Installs Zsh + Oh My Zsh + Powerlevel10k + plugins
+  - Installs MesloLGS NF fonts
+  - Installs system packages & desktop dependencies
+  - Bootstraps AUR helper (yay) & installs Quickshell / Ghostty on Arch Linux
+  - Installs modern CLI utilities (Neovim, Zellij, Lazygit, eza, zoxide, etc.)
+  - Installs Flatpak desktop apps (Vesktop, Zen Browser, ZapZap, Spotify, etc.)
+  - Deploys Nought (Nothing OS) Hyprland desktop rice & theme
+  - Sets default shell to Zsh
 
 Options:
   -h, --help            Show this help message
-  -u, --ubuntu          Run Ubuntu / Debian specific installer (Hyprland rice, PPA, tools)
-  -n, --nought          Deploy Nought (Nothing OS) desktop rice and theme
+  -u, --ubuntu          Run Ubuntu-specific script (install-ubuntu.sh)
+      --core-only       Install CLI tools and configs only (skip desktop rice and flatpaks)
+      --no-flatpak      Skip Flatpak desktop application installations
+  -n, --nought          Deploy Nought rice and themes only
       --revert-nought   Revert Nought theme and configs back to original state
-  -a, --all             Run full dotfiles installation and deploy Nought rice
-      --revert          Alias for --revert-nought
+  -a, --all             Run full dotfiles installation (default behavior)
 
-Without options, installs core dotfiles, shell, fonts, and terminal tools.
 EOF
 }
 
@@ -643,9 +774,10 @@ EOF
 # ------------------------------------------------------------------------------
 main() {
     local RUN_UBUNTU=false
-    local RUN_NOUGHT=false
-    local RUN_REVERT_NOUGHT=false
+    local RUN_NOUGHT=true
+    local RUN_FLATPAK=true
     local RUN_CORE=true
+    local RUN_REVERT_NOUGHT=false
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -656,21 +788,37 @@ main() {
             -u|--ubuntu)
                 RUN_UBUNTU=true
                 RUN_CORE=false
+                RUN_NOUGHT=false
+                RUN_FLATPAK=false
+                shift
+                ;;
+            --core-only)
+                RUN_CORE=true
+                RUN_NOUGHT=false
+                RUN_FLATPAK=false
+                shift
+                ;;
+            --no-flatpak)
+                RUN_FLATPAK=false
                 shift
                 ;;
             -n|--nought)
                 RUN_NOUGHT=true
                 RUN_CORE=false
+                RUN_FLATPAK=false
                 shift
                 ;;
             --revert-nought|--revert)
                 RUN_REVERT_NOUGHT=true
                 RUN_CORE=false
+                RUN_NOUGHT=false
+                RUN_FLATPAK=false
                 shift
                 ;;
             -a|--all)
                 RUN_CORE=true
                 RUN_NOUGHT=true
+                RUN_FLATPAK=true
                 shift
                 ;;
             *)
@@ -696,32 +844,42 @@ main() {
 
     if [ "$RUN_CORE" = true ]; then
         printf "\n%b========================================%b\n" "${BOLD}" "${NC}"
-        printf "%b   Installing Dotfiles & Shell Setup    %b\n" "${BOLD}" "${NC}"
+        printf "%b   Installing Complete Dotfiles Setup   %b\n" "${BOLD}" "${NC}"
         printf "%b========================================%b\n\n" "${BOLD}" "${NC}"
+        log_info "Using dotfiles from: ${DOTFILES_DIR}"
 
-        # Step 1: Deploy configs first so your settings are immediately staged
+        # Step 1: Deploy configs first so settings are immediately staged
         deploy_configs
 
         # Step 2: Install Oh My Zsh + Powerlevel10k + plugins
         install_zsh_ecosystem
 
-        # Step 3: Install MesloLGS NF fonts (for Powerlevel10k & icon glyphs)
+        # Step 3: Install MesloLGS NF fonts (for Powerlevel10k & icons)
         install_meslo_font
 
-        # Step 4: Install core system packages
+        # Step 4: Install core & desktop system packages (Arch / Fedora / Ubuntu)
         install_system_packages
 
-        # Step 5: Install modern CLI utilities (eza, zellij, lazygit, neovim, etc.)
+        # Step 5: Arch Linux AUR packages (Quickshell, Ghostty)
+        install_arch_aur
+
+        # Step 6: Install modern CLI utilities (eza, zellij, lazygit, neovim, etc.)
         install_modern_tools
 
-        # Step 6: Install Ghostty terminal emulator
+        # Step 7: Install Ghostty terminal emulator
         install_ghostty
 
-        # Step 7: Switch shell to Zsh
+        # Step 8: Switch shell to Zsh
         set_default_shell
     fi
 
+    if [ "$RUN_FLATPAK" = true ]; then
+        # Step 9: Install Flatpak apps & configurations (Vesktop, Zen, ZapZap, Spotify, etc.)
+        install_flatpaks
+    fi
+
     if [ "$RUN_NOUGHT" = true ]; then
+        # Step 10: Deploy Nought (Nothing OS) desktop rice, icons, and themes
         deploy_nought
     fi
 
@@ -729,13 +887,9 @@ main() {
     printf "%bSetup completed successfully!%b\n" "${GREEN}${BOLD}" "${NC}"
     printf "%b========================================%b\n\n" "${GREEN}${BOLD}" "${NC}"
     printf "MesloLGS NF fonts have been installed to %b~/.local/share/fonts%b.\n" "${BOLD}" "${NC}"
-    printf "(In your terminal emulator settings, select font: %bMesloLGS NF%b)\n\n" "${BOLD}" "${NC}"
+    printf "Applications configured: Vesktop, Zen Browser, ZapZap, Ghostty, Neovim, Nothing OS Rice.\n\n"
     printf "To start using your new environment right now, run:\n"
     printf "  %bexec zsh%b\n\n" "${BOLD}" "${NC}"
-    if [ "$RUN_NOUGHT" = false ]; then
-        printf "%bTip:%b To deploy the Nothing OS rice and theme, run: %b./install.sh --nought%b\n" "${YELLOW}" "${NC}" "${BOLD}" "${NC}"
-        printf "     To revert at any time, run: %b./revert-nought.sh%b\n\n" "${BOLD}" "${NC}"
-    fi
 }
 
 main "$@"

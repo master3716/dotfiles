@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+if flatpak info com.rtosta.zapzap >/dev/null 2>&1; then
+    exec flatpak run com.rtosta.zapzap "$@"
+elif command -v zapzap >/dev/null 2>&1; then
+    exec zapzap "$@"
+elif command -v zap >/dev/null 2>&1; then
+    exec zap "$@"
+else
+    echo "ZapZap is not installed. Install via Flatpak: flatpak install -y flathub com.rtosta.zapzap" >&2
+    exit 1
+fi
