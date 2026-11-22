@@ -2,32 +2,32 @@
 # Ghostty Configuration — Black & Red Minimalist Dark
 # ==============================================================================
 
-# Black Background & Vivid Red Accent
+# Black Background & Refined Red Accent
 background = #0b0b0b
-foreground = #e6e6e6
-cursor-color = #d71921
+foreground = #d0d0d0
+cursor-color = #ba3b40
 cursor-text = #0b0b0b
-selection-background = #4a0d11
+selection-background = #380d10
 selection-foreground = #ffffff
 
-# Black & Red ANSI Palette
+# Black & Red ANSI Palette (Muted, Non-Piercing)
 # Normal
 palette = 0=#0b0b0b
-palette = 1=#d71921
+palette = 1=#ba3b40
 palette = 2=#8f1419
-palette = 3=#b01319
-palette = 4=#c41e24
-palette = 5=#e5323c
-palette = 6=#ff4d4d
-palette = 7=#d4d4d4
+palette = 3=#a8393e
+palette = 4=#b8474d
+palette = 5=#c74248
+palette = 6=#b8595e
+palette = 7=#d0d0d0
 # Bright
-palette = 8=#333333
-palette = 9=#ff3b30
-palette = 10=#d71921
-palette = 11=#ff4d4d
-palette = 12=#e5323c
-palette = 13=#ff6b6b
-palette = 14=#ff8585
+palette = 8=#383838
+palette = 9=#c74248
+palette = 10=#ba3b40
+palette = 11=#c2555b
+palette = 12=#b8474d
+palette = 13=#a8393e
+palette = 14=#b8595e
 palette = 15=#ffffff
 
 # Typography
