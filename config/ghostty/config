@@ -1,33 +1,33 @@
 # ==============================================================================
-# Ghostty Configuration — Black & Red Minimalist Dark
+# Ghostty Configuration — Nothing OS Matte Black with Red Accents
 # ==============================================================================
 
-# Black Background & Refined Red Accent
+# Black Background & Nothing Red Accent
 background = #0b0b0b
-foreground = #d0d0d0
-cursor-color = #ba3b40
+foreground = #c0caf5
+cursor-color = #d71921
 cursor-text = #0b0b0b
-selection-background = #380d10
+selection-background = #361518
 selection-foreground = #ffffff
 
-# Black & Red ANSI Palette (Muted, Non-Piercing)
+# Balanced ANSI Palette (Green for existing commands, Red for errors)
 # Normal
 palette = 0=#0b0b0b
-palette = 1=#ba3b40
-palette = 2=#8f1419
-palette = 3=#a8393e
-palette = 4=#b8474d
-palette = 5=#c74248
-palette = 6=#b8595e
-palette = 7=#d0d0d0
+palette = 1=#f7768e
+palette = 2=#9ece6a
+palette = 3=#e0af68
+palette = 4=#7aa2f7
+palette = 5=#bb9af7
+palette = 6=#7dcfff
+palette = 7=#c0caf5
 # Bright
-palette = 8=#383838
-palette = 9=#c74248
-palette = 10=#ba3b40
-palette = 11=#c2555b
-palette = 12=#b8474d
-palette = 13=#a8393e
-palette = 14=#b8595e
+palette = 8=#414868
+palette = 9=#ff4d4d
+palette = 10=#9ece6a
+palette = 11=#e0af68
+palette = 12=#82aaff
+palette = 13=#c792ea
+palette = 14=#7dcfff
 palette = 15=#ffffff
 
 # Typography
