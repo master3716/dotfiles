@@ -53,11 +53,12 @@ volumeMixer = firstAvailable({ "pavucontrol-qt", "pavucontrol" },
 -- de+nodeadkeys, which is the same wrong-characters bug one level down.
 local function xkbFile()
     local fh = io.open("/etc/X11/xorg.conf.d/00-keyboard.conf")
-    if not fh then return nil, nil end
+    if not fh then return nil, nil, nil end
     local text = fh:read("*a")
     fh:close()
     return text:match('Option%s+"XkbLayout"%s+"([^"]*)"'),
-           text:match('Option%s+"XkbVariant"%s+"([^"]*)"')
+           text:match('Option%s+"XkbVariant"%s+"([^"]*)"'),
+           text:match('Option%s+"XkbOptions"%s+"([^"]*)"')
 end
 
 local function xkbLocalectl()
@@ -65,37 +66,41 @@ local function xkbLocalectl()
     -- Hyprland re-reads this config on every reload, and localectl talks
     -- to systemd-localed over dbus, which is not free on a cold bus.
     local f = io.popen("localectl status 2>/dev/null")
-    if not f then return nil, nil end
-    local layout, variant
+    if not f then return nil, nil, nil end
+    local layout, variant, options
     for line in f:lines() do
         layout  = layout  or line:match("X11 Layout:%s*(.-)%s*$")
         variant = variant or line:match("X11 Variant:%s*(.-)%s*$")
+        options = options or line:match("X11 Options:%s*(.-)%s*$")
     end
     f:close()
-    return layout, variant
+    return layout, variant, options
 end
 
 local function detectKeyboard()
     local env = os.getenv("XKB_DEFAULT_LAYOUT")
+    local envOpt = os.getenv("XKB_DEFAULT_OPTIONS")
     if env and env ~= "" then
         local v = os.getenv("XKB_DEFAULT_VARIANT")
-        return env, (v ~= "" and v or nil)
+        return env, (v ~= "" and v or nil), (envOpt ~= "" and envOpt or nil)
     end
 
-    local layout, variant = xkbFile()
+    local layout, variant, options = xkbFile()
     if not layout or layout == "" then
-        layout, variant = xkbLocalectl()
+        layout, variant, options = xkbLocalectl()
     end
     if not layout or layout == "" then
         -- Hyprland's own default anyway, said out loud so the next reader
         -- does not go looking for where it was decided.
-        return "us", nil
+        return "us", nil, options
     end
     -- "fr,us" is a legitimate answer: two layouts you switch between.
-    return (layout:gsub("%s+", "")), (variant and variant ~= "" and variant:gsub("%s+", "") or nil)
+    return (layout:gsub("%s+", "")),
+           (variant and variant ~= "" and variant:gsub("%s+", "") or nil),
+           (options and options ~= "" and options:gsub("%s+", "") or nil)
 end
 
-kbLayout, kbVariant = detectKeyboard()
+kbLayout, kbVariant, kbOptions = detectKeyboard()
 
 function ipc(target, fn)
     return hl.dsp.exec_cmd("qs -p " .. shellDir .. " ipc call " .. target .. " " .. fn)

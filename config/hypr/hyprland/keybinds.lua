@@ -60,6 +60,7 @@ hl.bind("CTRL + SHIFT + ALT + " .. mainMod .. " + Delete",
     hl.dsp.exec_cmd("systemctl poweroff || loginctl poweroff"))
 
 --## Windows
+hl.bind(mainMod .. " + SHIFT + Space", hl.dsp.exec_cmd("hyprctl switchxkblayout current next"))
 hl.bind(mainMod .. " + Q",          hl.dsp.window.close())
 hl.bind(mainMod .. " + SHIFT + ALT + Q", hl.dsp.exec_cmd("hyprctl kill"))
 hl.bind(mainMod .. " + D",          hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))

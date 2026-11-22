@@ -920,7 +920,7 @@ Singleton {
 
         a.barLeft = ["workspaces", "media"];
         a.barCentre = ["apps", "clock", "essential"];
-        a.barRight = ["tray", "net", "bluetooth", "cpu", "ram", "gpu", "temp",
+        a.barRight = ["tray", "kbd", "net", "bluetooth", "cpu", "ram", "gpu", "temp",
                       "updates", "mic", "volume", "battery",
                       "notifications", "privacy", "recording", "caffeine", "drives"];
 
@@ -1224,7 +1224,7 @@ Singleton {
             // scar.
             property var barLeft: ["workspaces", "media"]
             property var barCentre: ["apps", "clock", "essential"]
-            property var barRight: ["tray", "net", "bluetooth", "cpu", "ram",
+            property var barRight: ["tray", "kbd", "net", "bluetooth", "cpu", "ram",
                                     "gpu", "temp", "updates", "mic", "volume",
                                     "battery", "notifications", "privacy",
                                     "recording", "caffeine", "drives"]

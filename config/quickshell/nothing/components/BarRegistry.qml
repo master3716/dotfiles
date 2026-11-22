@@ -51,6 +51,8 @@ Singleton {
 
         { id: "tray",       label: "System tray", icon: "󰅢", zone: "right",
           hint: "Icons from background applications",      wide: true },
+        { id: "kbd",        label: "Keyboard",    icon: "󰌌", zone: "right",
+          hint: "Active keyboard layout (click to switch)", wide: false },
         { id: "net",        label: "Network",     icon: "󰖩", zone: "right",
           hint: "Wi-Fi or ethernet, click for the panel" },
         { id: "bluetooth",  label: "Bluetooth",   icon: "󰂯", zone: "right",

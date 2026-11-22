@@ -107,6 +107,7 @@ hl.config({
         -- AZERTY without asking, and passing nil here would leave whatever
         -- a previous reload set.
         kb_variant   = kbVariant or "",
+        kb_options   = kbOptions or (kbLayout and kbLayout:find(",") and "grp:alt_shift_toggle" or ""),
         follow_mouse = 1,
         sensitivity  = 0,
 

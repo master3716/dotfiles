@@ -119,6 +119,7 @@ Loader {
         case "recording":  return recordingPart;
         case "caffeine":   return caffeinePart;
         case "drives":     return drivesPart;
+        case "kbd":        return kbdPart;
         default:           return null;
         }
     }
@@ -827,6 +828,45 @@ Loader {
                 anchors.margins: -Theme.px(4)
                 cursorShape: Qt.PointingHandCursor
                 onClicked: Recorder.stop()
+            }
+        }
+    }
+
+    Component {
+        id: kbdPart
+        Item {
+            implicitWidth: kbdRow.implicitWidth
+            implicitHeight: Theme.px(14)
+            Layout.alignment: Qt.AlignVCenter
+
+            Row {
+                id: kbdRow
+                anchors.centerIn: parent
+                spacing: Theme.px(4)
+
+                NIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    size: Theme.px(13)
+                    text: "󰌌"
+                    color: kbdMa.containsMouse ? Theme.c.on : Theme.c.onDim
+                }
+
+                NText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Language.shortCode
+                    font.pixelSize: Theme.f.small
+                    font.weight: Font.DemiBold
+                    color: Language.isHebrew ? Theme.c.red : (kbdMa.containsMouse ? Theme.c.on : Theme.c.onDim)
+                }
+            }
+
+            MouseArea {
+                id: kbdMa
+                anchors.fill: parent
+                anchors.margins: -Theme.px(4)
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Language.toggle()
             }
         }
     }
