@@ -1,9 +1,32 @@
 # ==============================================================================
-# Ghostty Configuration — Tokyo Night Modern Dark
+# Ghostty Configuration — Tokyo Night Syntax on Pure Black
 # ==============================================================================
 
-# Theme
-theme = TokyoNight
+# Black Background & Tokyo Night Accents
+background = #0b0b0b
+foreground = #c0caf5
+cursor-color = #c0caf5
+cursor-text = #0b0b0b
+selection-background = #33467c
+selection-foreground = #ffffff
+
+# Tokyo Night 16 ANSI colors
+palette = 0=#15161e
+palette = 1=#f7768e
+palette = 2=#9ece6a
+palette = 3=#e0af68
+palette = 4=#7aa2f7
+palette = 5=#bb9af7
+palette = 6=#7dcfff
+palette = 7=#a9b1d6
+palette = 8=#414868
+palette = 9=#f7768e
+palette = 10=#9ece6a
+palette = 11=#e0af68
+palette = 12=#7aa2f7
+palette = 13=#bb9af7
+palette = 14=#7dcfff
+palette = 15=#c0caf5
 
 # Typography
 font-family = JetBrains Mono

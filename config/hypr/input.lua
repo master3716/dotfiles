@@ -5,7 +5,7 @@
 hl.config({
     input = {
         sensitivity = 0.00,
-        
+        accel_profile = "flat",
         natural_scroll = false,
         follow_mouse = 1,
         repeat_rate = 25,
