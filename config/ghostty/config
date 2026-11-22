@@ -1,16 +1,16 @@
 # ==============================================================================
-# Ghostty Configuration — Nothing OS Matte Black with Red Accents
+# Ghostty Configuration — Modern Pure Dark
 # ==============================================================================
 
-# Black Background & Nothing Red Accent
+# Black Background & Clean Light Cursor
 background = #0b0b0b
 foreground = #c0caf5
-cursor-color = #d71921
+cursor-color = #c0caf5
 cursor-text = #0b0b0b
-selection-background = #361518
+selection-background = #283457
 selection-foreground = #ffffff
 
-# Balanced ANSI Palette (Green for existing commands, Red for errors)
+# Balanced Natural ANSI Palette
 # Normal
 palette = 0=#0b0b0b
 palette = 1=#f7768e
