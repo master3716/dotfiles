@@ -96,8 +96,7 @@ cd ~/.dotfiles
 * **[direnv](https://direnv.net/)**: Automatic per-directory environment variables
 * **[lazygit](https://github.com/jesseduffield/lazygit)**: Interactive terminal UI for Git
 * **[zellij](https://zellij.dev/)**: Fast, customizable terminal multiplexer (`zj` alias, Tokyo Night theme)
-* **[ghostty](https://ghostty.org/)**: Fast, GPU-accelerated terminal emulator (Tokyo Night theme, non-transparent)
-* **[kitty](https://sw.kovidgoyal.net/kitty/)**: Alternative GPU terminal configured with full Tokyo Night color scheme
+* **[ghostty](https://ghostty.org/)**: Fast, GPU-accelerated terminal emulator (Black & Red theme, non-transparent)
 
 ### 3. Desktop Environments & System Integrations
 * **Hyprland Wayland Compositor** (`config/hypr/`):
@@ -241,12 +240,11 @@ git checkout main && git merge nought
     ├── fish/                  # Fish shell Nothing integration
     ├── fontconfig/            # Fontconfig Inter / Ndot typography
     ├── ghostty/
-    │   └── config             # Ghostty Tokyo Night modern configuration
+    │   └── config             # Ghostty Black & Red modern configuration
     ├── gnome/                 # GNOME Dash to panel, Mutter, and keybinding dconfs
     ├── gtk-3.0/               # GTK 3 Nothing matte black + red theme
     ├── gtk-4.0/               # GTK 4 Nothing matte black + red theme
     ├── hypr/                  # Hyprland Lua configuration & keybinds
-    ├── kitty/                 # Kitty terminal Nothing theme
     ├── nvim/                  # Neovim (LazyVim) configuration
     │   ├── init.lua
     │   ├── lazyvim.json

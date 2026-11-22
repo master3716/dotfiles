@@ -20,7 +20,7 @@ function firstAvailable(candidates, fallback)
     return fallback
 end
 
-terminal    = firstAvailable({ "kitty", "foot", "alacritty", "ghostty", "wezterm" }, "xterm")
+terminal    = firstAvailable({ "ghostty", "foot", "alacritty", "wezterm" }, "xterm")
 fileManager = firstAvailable({ "dolphin", "nautilus", "thunar", "nemo", "pcmanfm" },
                              terminal .. " -e ranger")
 browser     = firstAvailable({ "helium-browser", "zen-browser", "google-chrome-stable",

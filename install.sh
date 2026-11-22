@@ -596,7 +596,6 @@ EOF
     link_file "${DOTFILES_DIR}/config/scripts" "${CONF}/scripts"
     link_file "${DOTFILES_DIR}/config/theme" "${CONF}/theme"
     link_file "${DOTFILES_DIR}/config/fastfetch" "${CONF}/fastfetch"
-    link_file "${DOTFILES_DIR}/config/kitty" "${CONF}/kitty"
     link_file "${DOTFILES_DIR}/config/starship.toml" "${CONF}/starship.toml"
     mkdir -p "${CONF}/fish/conf.d"
     link_file "${DOTFILES_DIR}/config/fish/conf.d/nothing.fish" "${CONF}/fish/conf.d/nothing.fish"

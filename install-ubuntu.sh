@@ -233,7 +233,6 @@ link_file "${DOTFILES_DIR}/config/nvim" "$CONF/nvim"
 
 # Terminals
 link_file "${DOTFILES_DIR}/config/ghostty/config" "$CONF/ghostty/config"
-link_file "${DOTFILES_DIR}/config/kitty" "$CONF/kitty"
 link_file "${DOTFILES_DIR}/config/zellij/config.kdl" "$CONF/zellij/config.kdl"
 
 # Hyprland & Desktop
