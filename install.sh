@@ -268,7 +268,7 @@ install_system_packages() {
             # Modern CLI replacements
             ripgrep fd bat fzf eza zoxide zellij lazygit fastfetch starship neovim
             # Hyprland & Wayland stack
-            hyprland hypridle hyprlock hyprpicker hyprsunset
+            hyprland hypridle hyprlock hyprpicker hyprsunset quickshell
             xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             # Audio & PipeWire stack
             pipewire wireplumber pipewire-pulse pipewire-alsa pipewire-jack pavucontrol playerctl
@@ -311,9 +311,14 @@ install_system_packages() {
         log_info "Detected Debian / Ubuntu (apt). Updating package list..."
         sudo apt-get update -y || true
 
-        # Hyprland PPA for modern builds if available
-        if has_cmd add-apt-repository && ! grep -rq "cppiber/hyprland" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
-            sudo add-apt-repository -y ppa:cppiber/hyprland 2>/dev/null || true
+        # Hyprland & Quickshell PPAs for Ubuntu
+        if has_cmd add-apt-repository; then
+            if ! grep -rq "cppiber/hyprland" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
+                sudo add-apt-repository -y ppa:cppiber/hyprland 2>/dev/null || true
+            fi
+            if ! grep -rq "avengemedia/danklinux" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
+                sudo add-apt-repository -y ppa:avengemedia/danklinux 2>/dev/null || true
+            fi
             sudo apt-get update -qq || true
         fi
 
@@ -321,9 +326,9 @@ install_system_packages() {
             zsh git curl wget unzip tar build-essential ripgrep fd-find bat fzf tree jq tmux
             python3 python3-pip python3-venv python3-pil python3-numpy pipx shellcheck direnv
             gcc g++ make cmake fontconfig flatpak
-            hyprland hypridle hyprlock xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+            hyprland hypridle hyprlock quickshell xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             pipewire pipewire-pulse wireplumber pavucontrol playerctl brightnessctl
-            wl-clipboard cliphist grim slurp
+            wl-clipboard cliphist grim slurp swappy wf-recorder zenity dconf chafa ffmpeg mpv nautilus
         )
         sudo apt-get install -y --no-install-recommends "${deb_pkgs[@]}" || log_warn "Some apt packages failed to install."
 
