@@ -125,6 +125,9 @@ deploy_configs() {
     mkdir -p "$DATA/org.gnome.Ptyxis/palettes"
     link_file "${DOTFILES_DIR}/config/ptyxis/palettes/tokyo-night.palette" "$DATA/org.gnome.Ptyxis/palettes/tokyo-night.palette"
 
+    # MPV Media Player Config
+    [ -d "${DOTFILES_DIR}/config/mpv" ] && link_file "${DOTFILES_DIR}/config/mpv" "${CONF}/mpv"
+
     # Nothing OS Desktop Shell Config
     if [ -f "${DOTFILES_DIR}/config/nothing/config.json" ]; then
         mkdir -p "${CONF}/nothing"
@@ -263,10 +266,11 @@ install_system_packages() {
         local arch_pkgs=(
             # Build essentials & core
             base-devel git zsh curl wget unzip tar tree jq tmux cmake fontconfig direnv shellcheck
-            # Python ecosystem
-            python python-pip python-pipx python-pillow python-numpy
-            # Modern CLI replacements
-            ripgrep fd bat fzf eza zoxide zellij lazygit fastfetch starship neovim
+            # Python ecosystem & package management
+            python python-pip python-pipx python-pillow python-numpy uv
+            # Modern CLI replacements, monitors & cloud/containers
+            ripgrep fd bat fzf eza zoxide zellij lazygit fastfetch starship neovim htop btop
+            podman podman-compose rclone tailscale
             # Hyprland & Wayland stack
             hyprland hypridle hyprlock hyprpicker hyprsunset quickshell
             xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
@@ -296,8 +300,10 @@ install_system_packages() {
         local fedora_pkgs=(
             # Shell, build tools, essentials
             zsh git curl wget unzip tar ripgrep fd-find bat fzf tree jq tmux
-            python3 python3-pip python3-pillow python3-numpy pipx direnv
+            python3 python3-pip python3-pillow python3-numpy pipx direnv uv
             gcc gcc-c++ make cmake fontconfig util-linux-user eza shellcheck flatpak
+            # CLI tools, monitors, containers & cloud
+            fastfetch htop btop rclone podman podman-compose tailscale
             # Hyprland & Quickshell
             hyprland hypridle hyprlock quickshell
             xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
@@ -326,6 +332,7 @@ install_system_packages() {
             zsh git curl wget unzip tar build-essential ripgrep fd-find bat fzf tree jq tmux
             python3 python3-pip python3-venv python3-pil python3-numpy pipx shellcheck direnv
             gcc g++ make cmake fontconfig flatpak
+            htop btop rclone podman podman-compose
             hyprland hypridle hyprlock quickshell xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             pipewire pipewire-pulse wireplumber pavucontrol playerctl brightnessctl
             wl-clipboard cliphist grim slurp swappy wf-recorder zenity dconf chafa ffmpeg mpv nautilus
@@ -505,7 +512,77 @@ install_modern_tools() {
 }
 
 # ------------------------------------------------------------------------------
-# 7. Ghostty Terminal Emulator
+# 7. Antigravity CLI, Astral uv, and Developer Tools
+# ------------------------------------------------------------------------------
+install_developer_tools() {
+    log_info "Configuring Antigravity CLI, Astral uv, and developer tools..."
+    local ARCH
+    ARCH="$(uname -m)"
+
+    # Antigravity CLI (agy)
+    if ! has_cmd agy && [ ! -f "$HOME/.local/bin/agy" ]; then
+        log_info "Installing Antigravity CLI (agy)..."
+        curl -fsSL https://antigravity.google/cli/install.sh | bash 2>/dev/null || \
+            curl -fsSL https://antigravity.dev/install.sh | bash 2>/dev/null || \
+            log_warn "Could not install Antigravity CLI automatically. You can install it later from https://antigravity.google"
+    else
+        log_info "Antigravity CLI (agy) is already installed."
+    fi
+
+    # Astral uv (fast Python package and project manager)
+    if ! has_cmd uv && [ ! -f "$HOME/.local/bin/uv" ]; then
+        log_info "Installing Astral uv (fast Python package manager)..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh 2>/dev/null || true
+    else
+        log_info "uv is already installed."
+    fi
+
+    # Cloudflare Tunnel daemon (cloudflared)
+    if ! has_cmd cloudflared && [ ! -f "$HOME/.local/bin/cloudflared" ]; then
+        log_info "Installing cloudflared tunnel daemon..."
+        local CF_ARCH="amd64"
+        [ "$ARCH" = "aarch64" ] && CF_ARCH="arm64"
+        curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CF_ARCH}" -o "$HOME/.local/bin/cloudflared" 2>/dev/null || true
+        chmod +x "$HOME/.local/bin/cloudflared" 2>/dev/null || true
+    fi
+
+    # Rclone (cloud storage synchronization)
+    if ! has_cmd rclone && [ ! -f "$HOME/.local/bin/rclone" ]; then
+        log_info "Installing rclone..."
+        curl -fsSL https://rclone.org/install.sh | sudo bash 2>/dev/null || true
+    fi
+
+    # Podman Docker compatibility symlink
+    if ! has_cmd docker && has_cmd podman; then
+        log_info "Configuring docker -> podman symlink..."
+        ln -sf "$(command -v podman)" "$HOME/.local/bin/docker" 2>/dev/null || true
+    fi
+
+    # Fastfetch fallback for distros without native package
+    if ! has_cmd fastfetch && [ ! -f "$HOME/.local/bin/fastfetch" ] && [ "$ARCH" = "x86_64" ]; then
+        log_info "Installing fastfetch standalone binary..."
+        curl -fsSL https://github.com/fastfetch-cli/fastfetch/releases/latest/download/fastfetch-linux-amd64.tar.gz -o /tmp/fastfetch.tar.gz 2>/dev/null || true
+        if [ -f /tmp/fastfetch.tar.gz ]; then
+            tar -xzf /tmp/fastfetch.tar.gz -C /tmp 2>/dev/null || true
+            install -m 755 /tmp/fastfetch-linux-amd64/usr/bin/fastfetch "$HOME/.local/bin/fastfetch" 2>/dev/null || true
+            rm -rf /tmp/fastfetch* 2>/dev/null || true
+        fi
+    fi
+
+    # SpotDL (Spotify music downloader)
+    if ! has_cmd spotdl; then
+        if has_cmd uv; then
+            log_info "Installing spotdl via uv tool..."
+            uv tool install spotdl 2>/dev/null || true
+        elif has_cmd pipx; then
+            log_info "Installing spotdl via pipx..."
+            pipx install spotdl 2>/dev/null || true
+        fi
+    fi
+}
+
+# ------------------------------------------------------------------------------
+# 8. Ghostty Terminal Emulator
 # ------------------------------------------------------------------------------
 install_ghostty() {
     if has_cmd ghostty || [ -f "$HOME/.local/bin/ghostty" ]; then
@@ -550,7 +627,7 @@ install_ghostty() {
 }
 
 # ------------------------------------------------------------------------------
-# 8. Flatpak Desktop Applications (Vesktop, Zen, ZapZap, Spotify, etc.)
+# 9. Flatpak Desktop Applications (Vesktop, Zen, ZapZap, Spotify, etc.)
 # ------------------------------------------------------------------------------
 install_flatpaks() {
     log_info "Configuring Flatpak and core desktop applications..."
@@ -609,7 +686,7 @@ install_flatpaks() {
 }
 
 # ------------------------------------------------------------------------------
-# 9. Set Default Shell to Zsh
+# 10. Set Default Shell to Zsh
 # ------------------------------------------------------------------------------
 set_default_shell() {
     if ! has_cmd zsh; then
@@ -633,7 +710,7 @@ set_default_shell() {
 }
 
 # ------------------------------------------------------------------------------
-# 10. Nought (Nothing OS) Rice & Theme Integration
+# 11. Nought (Nothing OS) Rice & Theme Integration
 # ------------------------------------------------------------------------------
 deploy_nought() {
     log_info "Deploying Nought (Nothing OS) Rice & Theme..."
@@ -758,6 +835,7 @@ By default (with no options), runs the complete setup:
   - Installs system packages & desktop dependencies
   - Bootstraps AUR helper (yay) & installs Quickshell / Ghostty on Arch Linux
   - Installs modern CLI utilities (Neovim, Zellij, Lazygit, eza, zoxide, etc.)
+  - Installs developer tools (Antigravity CLI, Astral uv, Podman/Docker, cloudflared, rclone, spotdl)
   - Installs Flatpak desktop apps (Vesktop, Zen Browser, ZapZap, Spotify, etc.)
   - Deploys Nought (Nothing OS) Hyprland desktop rice & theme
   - Sets default shell to Zsh
@@ -871,20 +949,23 @@ main() {
         # Step 6: Install modern CLI utilities (eza, zellij, lazygit, neovim, etc.)
         install_modern_tools
 
-        # Step 7: Install Ghostty terminal emulator
+        # Step 7: Install Developer & System Tools (Antigravity CLI, Astral uv, Podman/Docker, cloudflared, rclone, spotdl)
+        install_developer_tools
+
+        # Step 8: Install Ghostty terminal emulator
         install_ghostty
 
-        # Step 8: Switch shell to Zsh
+        # Step 9: Switch shell to Zsh
         set_default_shell
     fi
 
     if [ "$RUN_FLATPAK" = true ]; then
-        # Step 9: Install Flatpak apps & configurations (Vesktop, Zen, ZapZap, Spotify, etc.)
+        # Step 10: Install Flatpak apps & configurations (Vesktop, Zen, ZapZap, Spotify, etc.)
         install_flatpaks
     fi
 
     if [ "$RUN_NOUGHT" = true ]; then
-        # Step 10: Deploy Nought (Nothing OS) desktop rice, icons, and themes
+        # Step 11: Deploy Nought (Nothing OS) desktop rice, icons, and themes
         deploy_nought
     fi
 
@@ -892,7 +973,7 @@ main() {
     printf "%bSetup completed successfully!%b\n" "${GREEN}${BOLD}" "${NC}"
     printf "%b========================================%b\n\n" "${GREEN}${BOLD}" "${NC}"
     printf "MesloLGS NF fonts have been installed to %b~/.local/share/fonts%b.\n" "${BOLD}" "${NC}"
-    printf "Applications configured: Vesktop, Zen Browser, ZapZap, Ghostty, Neovim, Nothing OS Rice.\n\n"
+    printf "Applications configured: Vesktop, Zen Browser, ZapZap, Ghostty, Neovim, Antigravity CLI, Nothing OS Rice.\n\n"
     printf "To start using your new environment right now, run:\n"
     printf "  %bexec zsh%b\n\n" "${BOLD}" "${NC}"
 }

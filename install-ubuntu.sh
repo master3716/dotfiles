@@ -186,6 +186,42 @@ if ! has_cmd ghostty; then
     fi
 fi
 
+# Antigravity CLI (agy)
+if ! has_cmd agy && [ ! -f "$BIN/agy" ]; then
+    log_info "Installing Antigravity CLI (agy)..."
+    curl -fsSL https://antigravity.google/cli/install.sh | bash 2>/dev/null || \
+        curl -fsSL https://antigravity.dev/install.sh | bash 2>/dev/null || \
+        log_warn "Could not install Antigravity CLI automatically."
+fi
+
+# Astral uv
+if ! has_cmd uv && [ ! -f "$BIN/uv" ]; then
+    log_info "Installing Astral uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh 2>/dev/null || true
+fi
+
+# Cloudflare Tunnel (cloudflared)
+if ! has_cmd cloudflared && [ ! -f "$BIN/cloudflared" ]; then
+    log_info "Installing cloudflared..."
+    ARCH="$(uname -m)"
+    CF_ARCH="amd64"
+    [ "$ARCH" = "aarch64" ] && CF_ARCH="arm64"
+    curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CF_ARCH}" -o "$BIN/cloudflared" 2>/dev/null || true
+    chmod +x "$BIN/cloudflared" 2>/dev/null || true
+fi
+
+# Rclone
+if ! has_cmd rclone && [ ! -f "$BIN/rclone" ]; then
+    log_info "Installing rclone..."
+    curl -fsSL https://rclone.org/install.sh | sudo bash 2>/dev/null || true
+fi
+
+# Podman Docker compatibility symlink
+if ! has_cmd docker && has_cmd podman; then
+    log_info "Configuring docker -> podman symlink..."
+    ln -sf "$(command -v podman)" "$BIN/docker" 2>/dev/null || true
+fi
+
 # ------------------------------------------------------------------------------
 # 4. Fonts
 # ------------------------------------------------------------------------------

@@ -236,8 +236,8 @@ if command -v zoxide &>/dev/null; then
 fi
 
 
-# Added by Antigravity CLI installer
-export PATH="/home/oferg/.local/bin:$PATH"
+# Antigravity CLI & Local Binaries
+export PATH="$HOME/.local/bin:$PATH"
 alias agy='agy --dangerously-skip-permissions'
 
 # ============================================================

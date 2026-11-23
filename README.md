@@ -77,28 +77,17 @@ exec zsh
 * **Dual-Language Input (English + Hebrew)**:
   * Switching shortcuts: `Alt + Shift` (or `Shift + Alt`), and `Super + Shift + Space` (keeping `Super + Space` dedicated to the app launcher).
   * Interactive top bar indicator (`󰌌 EN` / `󰌌 HE`): Highlights `HE` in Nothing Red when Hebrew is active; click to switch.
-* **Zsh** as the default shell with **[Oh My Zsh](https://ohmyz.sh/)**
-* **[Powerlevel10k](https://github.com/romkatv/powerlevel10k)** fast theme (`.p10k.zsh` pre-configured)
-* **Directory Navigation**:
-  * **[zoxide](https://github.com/ajeetdsouza/zoxide)** hooked directly into `cd` (`eval "$(zoxide init zsh --cmd cd)"`) with interactive `cdi` (`zi`) jump
-  * Smart `cdpath` enabled (`cdpath=(. ~ ~/HardDrive)`) allowing quick access across drives and projects
-* **Zsh Plugins**:
-  * `zsh-autosuggestions` - Fish-like autosuggestions based on history
-  * `zsh-syntax-highlighting` - Fast syntax highlighting for commands
-  * `fzf-tab` - FZF-powered tab completion preview
-  * `git`, `vi-mode`, `colored-man-pages`, `command-not-found`, `extract`, `history`, `sudo`
-* **Vi Mode**:
-  * Escape with `jj` in insert mode
-  * Low key-timeout for responsive switching
-* **Custom Aliases**:
-  * `pipi` -> `pip install`
-  * `python` -> `python3`
-  * `zj` -> `zellij`
-  * `cls` -> `clear`
-  * `h` -> `history`, `j` -> `jobs`
-  * `agy` -> `agy --dangerously-skip-permissions` (Antigravity CLI)
+### 3. Developer, Cloud & System Utilities
+* **[Antigravity CLI](https://antigravity.google)** (`agy`): Powerful agentic terminal assistant (`alias agy='agy --dangerously-skip-permissions'`)
+* **[Astral uv](https://docs.astral.sh/uv/)**: Extremely fast Python package and tool manager (`uv`, `uvx`)
+* **[Podman](https://podman.io/) & [Podman Compose](https://github.com/containers/podman-compose)**: Daemonless container engine with automatic `docker -> podman` compatibility link
+* **[Cloudflare Tunnel](https://github.com/cloudflare/cloudflared)** (`cloudflared`): Secure remote tunneling daemon
+* **[Rclone](https://rclone.org/)**: Universal cloud storage synchronization tool
+* **[Tailscale](https://tailscale.com/)**: Zero-config encrypted mesh VPN
+* **[SpotDL](https://spotdl.rtfd.io/)**: Spotify music downloader tool
+* **System Monitors & Media**: `htop`, `btop`, `fastfetch`, and `chafa` (terminal image and thumbnail viewer)
 
-### 2. Modern CLI Tools & System Fetch
+### 4. Modern CLI Tools & System Fetch
 * **[dbfetch](file:///home/oferg/.dotfiles/bin/dbfetch)**: Custom Dragon Ball ASCII art system fetcher powered by Fastfetch / Neofetch
   * Features 80+ handcrafted Dragon Ball characters (`data/dragonball/ascii`)
   * Automatically displays on interactive shell startup
@@ -117,7 +106,7 @@ exec zsh
 * **[zellij](https://zellij.dev/)**: Fast, customizable terminal multiplexer (`zj` alias, Tokyo Night theme)
 * **[ghostty](https://ghostty.org/)**: Fast, GPU-accelerated terminal emulator (Black & Red theme, non-transparent)
 
-### 3. Desktop Environments & System Integrations
+### 5. Desktop Environments & System Integrations
 * **Hyprland Wayland Compositor** (`config/hypr/`):
   * **Lua Configuration**: Modern Lua-based Hyprland config (`hyprland.lua`, `hyprland/*.lua`)
   * **Displays**: Dynamic multi-monitor resolution, positioning, scaling, and orientation managed via `displays.lua` (`SUPER + P`)
@@ -137,7 +126,7 @@ exec zsh
   * Fedora 44 OpenSSL CA certificates sandbox wrapper (`bwrap`) to prevent network TLS handshake failures (RHBZ #2387674)
   * Configured with `config/steam/steam.desktop`
 
-### 4. Editor (Neovim + LazyVim)
+### 6. Editor (Neovim + LazyVim)
 * **[Neovim](https://neovim.io/)** with **[LazyVim](https://www.lazyvim.org/)** starter
 * **Theme**: Official **Tokyo Night** (`folke/tokyonight.nvim`, `style = "night"`)
 * Language Support & LSP:
@@ -147,7 +136,7 @@ exec zsh
   * `snacks.nvim` + `toggleterm.nvim`: Floating terminal mapped to `<Ctrl-t>`
   * `snacks.nvim` file picker/explorer: Press `n` to create files or folders, press `<Ctrl-t>` to spawn a terminal inside the selected directory
 
-### 5. Compilers & Toolchains
+### 7. Compilers & Toolchains
 * **Rust**: `rustup`, `cargo`, `rust-analyzer`, `clippy`, `rustfmt`
 * **Python**: Python 3, `pip`, `venv`, `pipx`, and `ipython`
 * **C/C++**: `build-essential`, `gcc`, `g++`, `make`, `cmake`
