@@ -43,6 +43,98 @@ exec zsh
 
 ---
 
+## 📦 Dependencies & What Gets Installed
+
+Even though `./install.sh` automatically checks, resolves, and downloads all dependencies for you, this section details everything required by and downloaded onto your system.
+
+### 1. Minimal Prerequisites (Before Running)
+Before running `./install.sh`, the host machine only needs:
+* **Operating System**: Fresh or existing installation of Arch Linux, Fedora (40+), or Ubuntu (24.04+ / Debian-based).
+* **Base Packages**: `bash`, `curl` (or `wget`), and `git`.
+* **User Privileges**: A user account with `sudo` permissions (for distro package management).
+* **Display Server**: Wayland-capable GPU drivers (for the Hyprland & Quickshell desktop environment).
+
+---
+
+### 2. System Packages by Distribution (Installed via Package Manager)
+
+The installer detects your distribution and installs the following package sets:
+
+| Category | Arch Linux (`pacman` / AUR) | Fedora (`dnf` + Copr) | Ubuntu / Debian (`apt` + PPA) |
+|---|---|---|---|
+| **Shell & Core Tools** | `zsh`, `git`, `curl`, `wget`, `unzip`, `tar`, `tree`, `jq`, `tmux`, `cmake`, `direnv`, `shellcheck` | `zsh`, `git`, `curl`, `wget`, `unzip`, `tar`, `tree`, `jq`, `tmux`, `cmake`, `direnv`, `shellcheck`, `util-linux-user` | `zsh`, `git`, `curl`, `wget`, `unzip`, `tar`, `tree`, `jq`, `tmux`, `cmake`, `direnv`, `shellcheck` |
+| **Build Essentials** | `base-devel`, `gcc`, `cmake`, `fontconfig` | `gcc`, `gcc-c++`, `make`, `cmake`, `fontconfig` | `build-essential`, `gcc`, `g++`, `make`, `cmake`, `fontconfig` |
+| **Python Ecosystem** | `python`, `python-pip`, `python-pipx`, `python-pillow`, `python-numpy`, `uv` | `python3`, `python3-pip`, `python3-pillow`, `python3-numpy`, `pipx`, `uv` | `python3`, `python3-pip`, `python3-venv`, `python3-pil`, `python3-numpy`, `pipx` |
+| **CLI & System Monitors** | `ripgrep`, `fd`, `bat`, `fzf`, `eza`, `zoxide`, `zellij`, `lazygit`, `fastfetch`, `starship`, `neovim`, `htop`, `btop` | `ripgrep`, `fd-find`, `bat`, `fzf`, `eza`, `fastfetch`, `htop`, `btop` | `ripgrep`, `fd-find`, `bat`, `fzf`, `htop`, `btop` |
+| **Containers & Mesh VPN** | `podman`, `podman-compose`, `rclone`, `tailscale` | `podman`, `podman-compose`, `rclone`, `tailscale` | `podman`, `podman-compose`, `rclone` |
+| **Hyprland & Wayland** | `hyprland`, `hypridle`, `hyprlock`, `hyprpicker`, `hyprsunset`, `quickshell`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk` | `hyprland`, `hypridle`, `hyprlock`, `quickshell`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk` | `hyprland`, `hypridle`, `hyprlock`, `quickshell`, `xdg-desktop-portal`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `wayland-protocols`, `libwayland-dev` *(via `install-ubuntu.sh`)* |
+| **Audio & Media** | `pipewire`, `wireplumber`, `pipewire-pulse`, `pipewire-alsa`, `pipewire-jack`, `pavucontrol`, `playerctl`, `ffmpeg`, `mpv` | `pipewire`, `wireplumber`, `pavucontrol`, `playerctl`, `ffmpeg`, `mpv` | `pipewire`, `pipewire-pulse`, `wireplumber`, `libspa-0.2-bluetooth`, `pavucontrol`, `playerctl`, `ffmpeg`, `mpv` |
+| **Desktop Utilities** | `brightnessctl`, `wl-clipboard`, `cliphist`, `grim`, `slurp`, `swappy`, `wf-recorder`, `zenity`, `dconf`, `chafa`, `nautilus`, `polkit-kde-agent` | `brightnessctl`, `wl-clipboard`, `cliphist`, `grim`, `slurp`, `swappy`, `wf-recorder`, `zenity`, `dconf`, `chafa`, `nautilus` | `brightnessctl`, `wl-clipboard`, `cliphist`, `grim`, `slurp`, `swappy`, `wf-recorder`, `zenity`, `dconf`, `chafa`, `nautilus`, `udisks2` |
+| **System Fonts** | `noto-fonts`, `noto-fonts-emoji`, `noto-fonts-cjk`, `ttf-font-awesome`, `ttf-inter` | System default + MesloLGS NF | `fonts-font-awesome` + MesloLGS NF |
+| **Application Framework** | `flatpak` | `flatpak` | `flatpak` |
+
+*Note: On Ubuntu/Debian, `install-ubuntu.sh` also installs `software-properties-common`, `apt-transport-https`, `ca-certificates`, `gpg`, and `pkg-config`, and symlinks `batcat -> bat` and `fdfind -> fd` in `~/.local/bin`.*
+
+---
+
+### 3. Repositories, PPAs & Coprs Added Automatically
+
+To ensure cutting-edge packages for Hyprland, Quickshell, and Ghostty, the installer configures:
+* **Arch Linux**:
+  * Bootstraps `yay-bin` from the Arch User Repository (AUR) if no AUR helper is detected.
+  * Installs `quickshell-git` / `quickshell` and `ghostty` from AUR.
+* **Fedora**:
+  * Copr: `ashbuk/Hyprland-Fedora` (Hyprland Wayland compositor builds)
+  * Copr: `errornointernet/quickshell` (Quickshell QML shell runtime)
+  * Copr: `scottames/ghostty` (Ghostty GPU terminal emulator)
+* **Ubuntu / Debian**:
+  * PPA: `ppa:cppiber/hyprland` (modern Hyprland packages)
+  * PPA: `ppa:avengemedia/danklinux` (Quickshell desktop runtime)
+  * Keyring/Repo: `deb.gierens.de` (`eza` modern `ls` replacement)
+  * Keyring/Repo: `deb.griffo.io` (Ghostty terminal emulator)
+
+---
+
+### 4. Standalone Binaries & Toolchains (Auto-Downloaded)
+
+If not directly available in standard repositories, the installer automatically downloads and stages the following official upstream binaries to `~/.local/bin`:
+
+* **[Antigravity CLI](https://antigravity.google)** (`agy`): DeepMind agentic AI assistant (`curl -fsSL https://antigravity.google/cli/install.sh | bash`)
+* **[Astral uv](https://docs.astral.sh/uv/)** (`uv`, `uvx`): Ultra-fast Python package and project manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
+* **[Cloudflare Tunnel](https://github.com/cloudflare/cloudflared)** (`cloudflared`): Official upstream binary from GitHub releases
+* **[Rclone](https://rclone.org/)**: Cloud sync utility (`curl https://rclone.org/install.sh | sudo bash`)
+* **[Neovim](https://neovim.io/) (v0.10+)**: Prebuilt x86_64 tarball from GitHub releases if the distro repository ships an older version (< 0.10)
+* **[zoxide](https://github.com/ajeetdsouza/zoxide)**: Smarter `cd` command installed via `https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh` if not provided by the distro repo
+* **[eza](https://github.com/eza-community/eza)**: Official `x86_64` GitHub release tarball fallback if the package manager did not install it
+* **[Zellij](https://zellij.dev/) & [Lazygit](https://github.com/jesseduffield/lazygit)**: Official upstream GitHub release binaries if not pre-packaged
+* **[Fastfetch](https://github.com/fastfetch-cli/fastfetch)**: Official binary tarball fallback for systems without native packaging
+* **[Ghostty](https://ghostty.org/)**: Falls back to `snap install ghostty --classic` if not available via AUR/Copr/apt repo
+* **[Rust Toolchain](https://rustup.rs/)**: `rustup`, `cargo`, `rust-analyzer` via `https://sh.rustup.rs`
+* **[MesloLGS NF Fonts](https://github.com/romkatv/powerlevel10k-media)**: Meslo Nerd Font variants (Regular, Bold, Italic, Bold Italic) downloaded directly into `~/.local/share/fonts/`
+* **Zsh Ecosystem**:
+  * **[Oh My Zsh](https://github.com/ohmyzsh/ohmyzsh)** (`~/.oh-my-zsh`)
+  * **[Powerlevel10k](https://github.com/romkatv/powerlevel10k)** theme
+  * Plugins: `zsh-autosuggestions`, `zsh-syntax-highlighting`, `fzf-tab`
+* **Python Tooling**: `ipython` (via `pipx`), `spotdl` (via `uv tool` or `pipx`)
+* **Container Compatibility**: Automated `docker -> podman` symlink in `~/.local/bin/docker`
+
+---
+
+### 5. Desktop Applications (Flatpaks via Flathub)
+
+Installed via Flatpak (`flathub` remote configured automatically; can be skipped using `--no-flatpak` or `--core-only`):
+
+* `dev.vencord.Vesktop` (Discord client pre-configured with Vencord & Nothing Red accents)
+* `app.zen_browser.zen` (Zen Browser with desktop launcher)
+* `com.rtosta.zapzap` (WhatsApp client with system tray integration)
+* `com.spotify.Client` (Spotify desktop)
+* `com.stremio.Stremio` (Stremio media player)
+* `com.discordapp.Discord` (Official Discord fallback)
+* `io.github.Foldex.AdwSteamGtk` (Adwaita theme integration for Steam)
+* `org.prismlauncher.PrismLauncher` (Open-source Minecraft launcher)
+
+---
+
 ## 🧰 What's Included
 
 ### 1. Shell & Prompts
