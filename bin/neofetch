@@ -3,23 +3,38 @@
 # Dragon Ball Neofetch / dbfetch (powered by Fastfetch)
 # ============================================================
 
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+REPO_DATA_DIR="${SCRIPT_DIR}/../data/dragonball"
+
 DBZ_DIR="${HOME}/.local/share/dragonball-neofetch"
 ANSI_DIR="${DBZ_DIR}/ascii"
 MANIFEST="${DBZ_DIR}/manifest.json"
-FASTFETCH_BIN="${HOME}/.local/bin/fastfetch"
+if [[ ! -d "$ANSI_DIR" && -d "${REPO_DATA_DIR}/ascii" ]]; then
+    ANSI_DIR="${REPO_DATA_DIR}/ascii"
+fi
+if [[ ! -f "$MANIFEST" && -f "${REPO_DATA_DIR}/manifest.json" ]]; then
+    MANIFEST="${REPO_DATA_DIR}/manifest.json"
+fi
+
+if [[ -x "${HOME}/.local/bin/fastfetch" ]]; then
+    FASTFETCH_BIN="${HOME}/.local/bin/fastfetch"
+else
+    FASTFETCH_BIN="$(command -v fastfetch 2>/dev/null || true)"
+fi
 CLASSIC_NEOFETCH="${HOME}/.local/libexec/neofetch-classic"
 
 # Fallback check
-if [[ ! -d "$ANSI_DIR" ]]; then
+if [[ ! -d "$ANSI_DIR" || -z "$FASTFETCH_BIN" ]]; then
     if [[ -x "$CLASSIC_NEOFETCH" ]]; then
         exec "$CLASSIC_NEOFETCH" "$@"
-    elif command -v fastfetch &>/dev/null; then
-        exec fastfetch "$@"
+    elif [[ -n "$FASTFETCH_BIN" ]]; then
+        exec "$FASTFETCH_BIN" "$@"
     fi
+    echo "dbfetch: fastfetch is not installed or Dragon Ball ASCII data is missing." >&2
     exit 1
 fi
 
-case "$1" in
+case "${1:-}" in
     --classic)
         shift
         exec "$CLASSIC_NEOFETCH" "$@"
@@ -74,20 +89,26 @@ esac
 CHOSEN=""
 
 # Search matching character if specified
-if [[ -n "$1" && "$1" != -* ]]; then
+if [[ -n "${1:-}" && "${1:-}" != -* ]]; then
     QUERY="$1"
     shift
     if [[ -f "$MANIFEST" ]] && command -v python3 &>/dev/null; then
         CHOSEN=$(python3 -c "
-import json, sys, random
+import json, os, sys, random
 q = sys.argv[1].lower()
-with open('$MANIFEST') as f:
+ansi_dir = sys.argv[2]
+with open(sys.argv[3]) as f:
     items = json.load(f)
 words = q.split()
-matches = [i['ansi'] for i in items if all(w in i['name'].lower() or w in i['slug'].lower() for w in words)]
+matches = [
+    i['ansi'] if os.path.exists(i['ansi']) else os.path.join(ansi_dir, os.path.basename(i['ansi']))
+    for i in items
+    if all(w in i['name'].lower() or w in i['slug'].lower() for w in words)
+]
+matches = [m for m in matches if os.path.exists(m)]
 if matches:
     print(random.choice(matches))
-" "$QUERY")
+" "$QUERY" "$ANSI_DIR" "$MANIFEST")
     fi
 
     # Fallback to direct filename matching if not found via manifest

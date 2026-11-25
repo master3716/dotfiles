@@ -505,11 +505,15 @@ if [ ! -d "${DATA}/nvim/lazy/lazy.nvim" ] && has_vendor_archive "${DOTFILES_DIR}
     extract_vendor_archive "${DOTFILES_DIR}/vendor/nvim/lazy.tar.xz" "${DATA}/nvim" || true
 fi
 
-# Bin wrappers (dbfetch, vesktop, zen, etc.)
+# Bin wrappers (dbfetch, vesktop, zen, etc.) & Dragon Ball fetch data
+chmod +x "${DOTFILES_DIR}/bin/neofetch" "${DOTFILES_DIR}/bin/dbfetch" 2>/dev/null || true
 for bin_file in "${DOTFILES_DIR}/bin"/*; do
     [ -e "$bin_file" ] || continue
     link_file "$bin_file" "$BIN/$(basename "$bin_file")"
 done
+mkdir -p "$DATA/dragonball-neofetch"
+link_file "${DOTFILES_DIR}/data/dragonball/ascii" "$DATA/dragonball-neofetch/ascii"
+link_file "${DOTFILES_DIR}/data/dragonball/manifest.json" "$DATA/dragonball-neofetch/manifest.json"
 
 # Nothing OS Desktop Shell Config
 if [ -f "${DOTFILES_DIR}/config/nothing/config.json" ]; then
