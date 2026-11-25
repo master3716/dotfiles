@@ -36,8 +36,9 @@ exec zsh
 | `./install.sh` | **Full One-Command Setup**: Deploys dotfiles, installs system & AUR packages, fonts, Ghostty, Flatpaks (Vesktop, Zen, ZapZap, Spotify), and Nought (Nothing OS) desktop rice |
 | `./install.sh --offline` (or `--local`) | **Offline / Artifactory Mode**: Installs system packages solely from configured `apt`/`dnf`/`pacman` mirrors (e.g., Artifactory) and extracts all non-distro tools, Zsh plugins, fonts, icons, and LazyVim plugins directly from `vendor/` without external internet calls |
 | `./install.sh --core-only` | Installs CLI dotfiles, Zsh ecosystem, fonts, and terminal tools only (skips desktop rice and flatpaks) |
-| `./install.sh --no-flatpak` | Installs everything except Flatpak applications |
-| `./install.sh --ubuntu` (or `-u`) | Runs Ubuntu-specific script (`install-ubuntu.sh`) |
+| `./install.sh --apps-only` | Runs only the optional Flatpak desktop apps stage (`Zen Browser`, `Vesktop`, `ZapZap`, `Spotify`, `Stremio`, `Discord`, `PrismLauncher`) |
+| `./install.sh --no-apps` / `--no-flatpak` | Installs everything except Flatpak applications |
+| `./install.sh --ubuntu` (or `-u`) | Runs Ubuntu-specific script (`install-ubuntu.sh`, which offers Flatpak desktop apps as an optional stage; pass `--apps` or `--apps-only` to install without prompting) |
 | `./install.sh --revert-nought` | Safely reverts Nought themes and restores previous system configuration |
 | `./revert-nought.sh` | Standalone one-click reverter script for Nought |
 | `./install.sh --help` | Displays command line usage and flags |

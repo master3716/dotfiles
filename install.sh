@@ -1153,7 +1153,10 @@ Options:
   -h, --help            Show this help message
   -u, --ubuntu          Run Ubuntu-specific script (install-ubuntu.sh)
       --core-only       Install CLI tools and configs only (skip desktop rice and flatpaks)
-      --no-flatpak      Skip Flatpak desktop application installations
+      --apps            Ensure optional Flatpak desktop apps stage runs
+      --apps-only       Run only the optional Flatpak desktop apps stage (Zen, Vesktop, ZapZap, etc.)
+      --no-apps         Skip optional Flatpak desktop application installations
+      --no-flatpak      Alias for --no-apps
       --offline, --local  Install strictly from apt/dnf/pacman (e.g. Artifactory) + local vendor/ (no external URLs/PPAs/Coprs/Flatpak)
   -n, --nought          Deploy Nought rice and themes only
       --revert-nought   Revert Nought theme and configs back to original state
@@ -1171,6 +1174,7 @@ main() {
     local RUN_FLATPAK=true
     local RUN_CORE=true
     local RUN_REVERT_NOUGHT=false
+    local APPS_FLAG=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -1189,10 +1193,24 @@ main() {
                 RUN_CORE=true
                 RUN_NOUGHT=false
                 RUN_FLATPAK=false
+                APPS_FLAG="--no-apps"
                 shift
                 ;;
-            --no-flatpak)
+            --apps|--with-apps|--flatpak)
+                RUN_FLATPAK=true
+                APPS_FLAG="--apps"
+                shift
+                ;;
+            --apps-only)
+                RUN_CORE=false
+                RUN_NOUGHT=false
+                RUN_FLATPAK=true
+                APPS_FLAG="--apps-only"
+                shift
+                ;;
+            --no-apps|--no-flatpak)
                 RUN_FLATPAK=false
+                APPS_FLAG="--no-apps"
                 shift
                 ;;
             --offline|--local)
@@ -1229,6 +1247,7 @@ main() {
         if [ -f "${DOTFILES_DIR}/install-ubuntu.sh" ]; then
             local ubuntu_args=()
             [ "$OFFLINE_MODE" = true ] && ubuntu_args+=("--offline")
+            [ -n "$APPS_FLAG" ] && ubuntu_args+=("$APPS_FLAG")
             bash "${DOTFILES_DIR}/install-ubuntu.sh" "${ubuntu_args[@]}"
             exit 0
         else

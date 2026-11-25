@@ -33,9 +33,40 @@ has_cmd() {
 }
 
 OFFLINE_MODE=false
+INSTALL_APPS="ask"
+APPS_ONLY=false
 for arg in "$@"; do
     case "$arg" in
-        --offline|--local) OFFLINE_MODE=true ;;
+        -h|--help)
+            cat <<'EOF'
+Usage: ./install-ubuntu.sh [OPTION]
+
+Ubuntu / Debian Dotfiles & Hyprland installer.
+
+Options:
+  -h, --help            Show this help message
+      --apps            Install optional desktop apps via Flatpak (Zen Browser, Vesktop, ZapZap, Spotify, etc.)
+      --apps-only       Run only the optional Flatpak desktop apps stage
+      --no-apps         Skip the optional Flatpak desktop apps stage
+      --no-flatpak      Alias for --no-apps
+      --offline, --local  Install strictly from apt (e.g. Artifactory) + local vendor/ (skips external PPAs/Flatpak)
+EOF
+            exit 0
+            ;;
+        --offline|--local)
+            OFFLINE_MODE=true
+            INSTALL_APPS="no"
+            ;;
+        --apps|--with-apps|--flatpak)
+            INSTALL_APPS="yes"
+            ;;
+        --no-apps|--no-flatpak)
+            INSTALL_APPS="no"
+            ;;
+        --apps-only)
+            APPS_ONLY=true
+            INSTALL_APPS="yes"
+            ;;
     esac
 done
 
@@ -214,11 +245,82 @@ APT_PACKAGES=(
     playerctl brightnessctl
     # Wayland utilities
     wl-clipboard cliphist grim slurp
-    # Modern CLI tools in apt
-    ripgrep fd-find bat fzf udisks2
+    # Modern CLI tools & Flatpak in apt
+    ripgrep fd-find bat fzf udisks2 flatpak
     # Fonts
     fonts-font-awesome
 )
+
+install_optional_apps() {
+    log_info "Starting optional stage: Desktop Applications (Flatpak)..."
+
+    if ! has_cmd flatpak; then
+        log_info "Installing flatpak..."
+        sudo apt-get install -y flatpak 2>/dev/null || true
+    fi
+
+    if ! has_cmd flatpak; then
+        log_warn "Flatpak is not available. Skipping optional desktop applications."
+        record_failure "Flatpak" "All optional apps" "flatpak could not be installed"
+        return 0
+    fi
+
+    sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || \
+        flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+
+    local flatpak_apps=(
+        dev.vencord.Vesktop
+        app.zen_browser.zen
+        com.rtosta.zapzap
+        com.spotify.Client
+        com.stremio.Stremio
+        com.discordapp.Discord
+        io.github.Foldex.AdwSteamGtk
+        org.prismlauncher.PrismLauncher
+    )
+
+    local app
+    for app in "${flatpak_apps[@]}"; do
+        if ! flatpak info "$app" >/dev/null 2>&1; then
+            log_info "Installing Flatpak: $app..."
+            if ! flatpak install -y --noninteractive flathub "$app" 2>/dev/null && \
+               ! flatpak install --user -y --noninteractive flathub "$app" 2>/dev/null; then
+                log_warn "Could not install $app."
+                record_failure "Flatpak" "$app"
+            fi
+        else
+            log_info "Flatpak $app is already installed."
+        fi
+    done
+
+    # Deploy Vesktop & ZapZap configs and cursor overrides
+    local VESKTOP_DIR="$HOME/.var/app/dev.vencord.Vesktop/config/vesktop"
+    mkdir -p "$VESKTOP_DIR/themes" "$VESKTOP_DIR/settings" "$CONF/vesktop"
+    [ -f "${DOTFILES_DIR}/config/vesktop/settings.json" ] && [ ! -f "$VESKTOP_DIR/settings.json" ] && \
+        cp "${DOTFILES_DIR}/config/vesktop/settings.json" "$VESKTOP_DIR/settings.json" 2>/dev/null || true
+    [ -f "${DOTFILES_DIR}/config/vesktop/settings/settings.json" ] && [ ! -f "$VESKTOP_DIR/settings/settings.json" ] && \
+        cp "${DOTFILES_DIR}/config/vesktop/settings/settings.json" "$VESKTOP_DIR/settings/settings.json" 2>/dev/null || true
+    [ -f "${DOTFILES_DIR}/config/vesktop/themes/nothing.theme.css" ] && \
+        cp -f "${DOTFILES_DIR}/config/vesktop/themes/nothing.theme.css" "$VESKTOP_DIR/themes/nothing.theme.css" 2>/dev/null || true
+
+    local ZAPZAP_DIR="$HOME/.var/app/com.rtosta.zapzap/config/ZapZap"
+    mkdir -p "$ZAPZAP_DIR" "$CONF/ZapZap"
+    if [ -f "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" ]; then
+        [ ! -f "$ZAPZAP_DIR/ZapZap.conf" ] && cp "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" "$ZAPZAP_DIR/ZapZap.conf" 2>/dev/null || true
+        [ ! -f "$CONF/ZapZap/ZapZap.conf" ] && cp "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" "$CONF/ZapZap/ZapZap.conf" 2>/dev/null || true
+    fi
+
+    flatpak override --user --env=XCURSOR_THEME=Adwaita --env=XCURSOR_SIZE=24 2>/dev/null || true
+}
+
+if [ "$APPS_ONLY" = true ]; then
+    install_optional_apps
+    printf "\n%b=================================================================%b\n" "${GREEN}${BOLD}" "${NC}"
+    printf "%b Optional Desktop Apps Stage Completed! %b\n" "${GREEN}${BOLD}" "${NC}"
+    printf "%b=================================================================%b\n\n" "${GREEN}${BOLD}" "${NC}"
+    print_summary
+    exit 0
+fi
 
 # Install packages allowing failures for optional ones
 if ! sudo apt-get install -y --no-install-recommends "${APT_PACKAGES[@]}" 2>/dev/null; then
@@ -608,6 +710,21 @@ ZSH_BIN="$(command -v zsh || true)"
 if [ -n "$ZSH_BIN" ] && [ "${SHELL:-}" != "$ZSH_BIN" ]; then
     log_info "Switching default shell to Zsh..."
     sudo chsh -s "$ZSH_BIN" "$USER" 2>/dev/null || chsh -s "$ZSH_BIN" 2>/dev/null || true
+fi
+
+# Optional Stage: Desktop Applications (Zen Browser, Vesktop, ZapZap, Spotify, etc.)
+if [ "$INSTALL_APPS" = "yes" ]; then
+    install_optional_apps
+elif [ "$INSTALL_APPS" = "ask" ] && [ "$OFFLINE_MODE" = false ] && [ -t 0 ]; then
+    printf "\n"
+    read -rp "Optional stage: install desktop apps via Flatpak (Zen Browser, Vesktop, ZapZap, Spotify, Stremio, Discord, PrismLauncher)? [y/N]: " install_apps_ans
+    if [[ "$install_apps_ans" =~ ^[Yy]$ ]]; then
+        install_optional_apps
+    else
+        log_info "Skipped optional Flatpak apps. You can install them anytime with: ./install-ubuntu.sh --apps-only"
+    fi
+elif [ "$INSTALL_APPS" = "ask" ] && [ "$OFFLINE_MODE" = false ]; then
+    log_info "Skipped optional Flatpak apps (non-interactive). Run './install-ubuntu.sh --apps' or './install-ubuntu.sh --apps-only' to install them."
 fi
 
 printf "\n%b=================================================================%b\n" "${GREEN}${BOLD}" "${NC}"
