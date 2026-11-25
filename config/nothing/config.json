@@ -255,10 +255,10 @@
     "touchpadNaturalScroll": true,
     "touchpadScrollFactor": 0.5,
     "translateLang": "English",
-    "wallpaper": "/home/oferg/HardDrive/Downloads/goku.jpg",
+    "wallpaper": "~/.config/hypr/wallpapers/goku.jpg",
     "wallpaperEachScreen": false,
     "wallpaperFill": "crop",
-    "wallpaperFolder": "/home/oferg/Pictures/Wallpapers",
+    "wallpaperFolder": "~/Pictures/Wallpapers",
     "wallpaperRotate": 0,
     "wallpaperScreenNames": [
     ],

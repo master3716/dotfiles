@@ -237,6 +237,7 @@ APT_PACKAGES=(
     # Wayland, Compositor, Shell, Portals & Fallbacks
     hyprland hypridle hyprlock hyprland-guiutils quickshell
     qml6-module-qtquick-layouts qml6-module-qtquick-controls qml6-module-qt5compat-graphicaleffects qml6-module-qtquick-effects
+    qt6-gtk-platformtheme qt6ct
     swaybg waybar wofi foot libnotify-bin
     xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     wayland-protocols libwayland-dev
@@ -247,8 +248,8 @@ APT_PACKAGES=(
     wl-clipboard cliphist grim slurp
     # Modern CLI tools & Flatpak in apt
     ripgrep fd-find bat fzf udisks2 flatpak
-    # Fonts
-    fonts-font-awesome
+    # Fonts & Icon Themes
+    fonts-font-awesome papirus-icon-theme adwaita-icon-theme hicolor-icon-theme yaru-theme-icon
 )
 
 install_optional_apps() {
@@ -618,21 +619,34 @@ mkdir -p "$DATA/dragonball-neofetch"
 link_file "${DOTFILES_DIR}/data/dragonball/ascii" "$DATA/dragonball-neofetch/ascii"
 link_file "${DOTFILES_DIR}/data/dragonball/manifest.json" "$DATA/dragonball-neofetch/manifest.json"
 
-# Nothing OS Desktop Shell Config
+# Nothing OS Desktop Shell Config & Wallpapers
 if [ -f "${DOTFILES_DIR}/config/nothing/config.json" ]; then
     mkdir -p "$CONF/nothing"
-    [ ! -f "$CONF/nothing/config.json" ] && cp "${DOTFILES_DIR}/config/nothing/config.json" "$CONF/nothing/config.json" 2>/dev/null || true
+    if [ ! -f "$CONF/nothing/config.json" ]; then
+        cp "${DOTFILES_DIR}/config/nothing/config.json" "$CONF/nothing/config.json" 2>/dev/null || true
+    elif grep -q '"/home/oferg/HardDrive/Downloads/goku.jpg"' "$CONF/nothing/config.json" 2>/dev/null && [ ! -f "/home/oferg/HardDrive/Downloads/goku.jpg" ]; then
+        sed -i 's|"/home/oferg/HardDrive/Downloads/goku.jpg"|"~/.config/hypr/wallpapers/goku.jpg"|g' "$CONF/nothing/config.json" 2>/dev/null || true
+    fi
 fi
+mkdir -p "$HOME/Pictures/Wallpapers"
+for wp in goku.jpg kame.jpg; do
+    [ -f "${DOTFILES_DIR}/config/hypr/wallpapers/${wp}" ] && [ ! -f "$HOME/Pictures/Wallpapers/${wp}" ] && \
+        cp "${DOTFILES_DIR}/config/hypr/wallpapers/${wp}" "$HOME/Pictures/Wallpapers/${wp}" 2>/dev/null || true
+done
 
-# GTK Themes & Nothing CSS
-mkdir -p "$CONF/gtk-3.0" "$CONF/gtk-4.0"
+# GTK, Qt & KDE icon theme configs
+mkdir -p "$CONF/gtk-3.0" "$CONF/gtk-4.0" "$CONF/qt6ct"
 link_file "${DOTFILES_DIR}/config/gtk-3.0/settings.ini" "$CONF/gtk-3.0/settings.ini"
 link_file "${DOTFILES_DIR}/config/gtk-3.0/gtk.css" "$CONF/gtk-3.0/gtk.css"
 link_file "${DOTFILES_DIR}/config/gtk-4.0/settings.ini" "$CONF/gtk-4.0/settings.ini"
 link_file "${DOTFILES_DIR}/config/gtk-4.0/gtk.css" "$CONF/gtk-4.0/gtk.css"
+link_file "${DOTFILES_DIR}/config/theme/kde/kdeglobals" "$CONF/kdeglobals"
+if [ ! -f "$CONF/qt6ct/qt6ct.conf" ]; then
+    printf '[Appearance]\nicon_theme=Nothing\n' > "$CONF/qt6ct/qt6ct.conf"
+fi
 
-# Nothing Icon Theme (dynamic build if numpy/PIL exist, else vendored fallback)
-mkdir -p "$DATA/icons/Nothing"
+# Nothing Icon Theme & App Icons (Vesktop, Discord, Nothing X)
+mkdir -p "$DATA/icons/Nothing" "$DATA/icons/hicolor/scalable/apps" "$DATA/applications"
 link_file "${DOTFILES_DIR}/config/theme/icons/Nothing/index.theme" "$DATA/icons/Nothing/index.theme"
 if [ -f "${DOTFILES_DIR}/config/scripts/build-nothing-icons.py" ] && python3 -c "import numpy, PIL" 2>/dev/null; then
     python3 "${DOTFILES_DIR}/config/scripts/build-nothing-icons.py" "$DATA/icons/Nothing" 2>/dev/null || true
@@ -640,6 +654,13 @@ fi
 if [ ! -d "$DATA/icons/Nothing/scalable" ] && has_vendor_archive "${DOTFILES_DIR}/vendor/icons/Nothing.tar.xz"; then
     extract_vendor_archive "${DOTFILES_DIR}/vendor/icons/Nothing.tar.xz" "$DATA/icons" || true
 fi
+for icon_svg in "${DOTFILES_DIR}/icons/hicolor/scalable/apps"/*.svg; do
+    [ -e "$icon_svg" ] || continue
+    link_file "$icon_svg" "$DATA/icons/hicolor/scalable/apps/$(basename "$icon_svg")"
+done
+link_file "${DOTFILES_DIR}/applications/nothing-x.desktop" "$DATA/applications/nothing-x.desktop"
+has_cmd gtk-update-icon-cache && { gtk-update-icon-cache -f "$DATA/icons/Nothing" 2>/dev/null || true; gtk-update-icon-cache -f "$DATA/icons/hicolor" 2>/dev/null || true; }
+has_cmd update-desktop-database && update-desktop-database "$DATA/applications" 2>/dev/null || true
 
 # Xresources & default cursor
 mkdir -p "$DATA/icons/default" "$HOME/.icons/default"
@@ -657,6 +678,9 @@ Xcursor.size: 24
 EOF
 
 if has_cmd gsettings; then
+    gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+    gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+    gsettings set org.gnome.desktop.interface icon-theme 'Nothing' 2>/dev/null || true
     gsettings set org.gnome.desktop.interface cursor-theme 'Adwaita' 2>/dev/null || true
     gsettings set org.gnome.desktop.interface cursor-size 24 2>/dev/null || true
 fi

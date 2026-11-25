@@ -1,6 +1,19 @@
 #!/usr/bin/env bash
 # Hyprland session startup helper for Hyprlang (Ubuntu / Hyprland < 0.56)
 export PATH="$HOME/.local/bin:$HOME/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+export XDG_DATA_DIRS="$HOME/.local/share/flatpak/exports/share:/var/lib/flatpak/exports/share:/var/lib/snapd/desktop:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+# Pick an actually installed Qt6 platform theme so Quickshell resolves system icon themes
+if compgen -G "/usr/lib/*/qt6/plugins/platformthemes/*KDEPlasma*" >/dev/null 2>&1 || \
+   compgen -G "/usr/lib64/qt6/plugins/platformthemes/*KDEPlasma*" >/dev/null 2>&1; then
+    export QT_QPA_PLATFORMTHEME=kde
+elif compgen -G "/usr/lib/*/qt6/plugins/platformthemes/*gtk3*" >/dev/null 2>&1 || \
+     compgen -G "/usr/lib64/qt6/plugins/platformthemes/*gtk3*" >/dev/null 2>&1; then
+    export QT_QPA_PLATFORMTHEME=gtk3
+elif compgen -G "/usr/lib/*/qt6/plugins/platformthemes/*qt6ct*" >/dev/null 2>&1 || \
+     compgen -G "/usr/lib64/qt6/plugins/platformthemes/*qt6ct*" >/dev/null 2>&1; then
+    export QT_QPA_PLATFORMTHEME=qt6ct
+fi
 
 udisksctl mount -b /dev/disk/by-label/HardDrive 2>/dev/null || true
 udisksctl mount -b /dev/disk/by-label/SSD 2>/dev/null || true
@@ -13,8 +26,15 @@ systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP 
 hyprctl setcursor Adwaita 24 2>/dev/null || true
 
 # Ensure a wallpaper is always visible (Quickshell renders on top if active)
-if command -v swaybg >/dev/null 2>&1 && [ -f "$HOME/.config/hypr/wallpaper.png" ] && ! pidof -s swaybg >/dev/null 2>&1; then
-    swaybg -i "$HOME/.config/hypr/wallpaper.png" -m fill >/dev/null 2>&1 &
+WALL_IMG=""
+for candidate in "$HOME/.config/hypr/wallpapers/goku.jpg" "$HOME/.config/hypr/wallpaper.png"; do
+    if [ -f "$candidate" ]; then
+        WALL_IMG="$candidate"
+        break
+    fi
+done
+if command -v swaybg >/dev/null 2>&1 && [ -n "$WALL_IMG" ] && ! pidof -s swaybg >/dev/null 2>&1; then
+    swaybg -i "$WALL_IMG" -m fill >/dev/null 2>&1 &
 fi
 
 # Start Quickshell Nothing shell; verify it stays alive, else fall back to waybar

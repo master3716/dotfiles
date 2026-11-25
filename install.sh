@@ -198,14 +198,21 @@ deploy_configs() {
     # MPV Media Player Config
     [ -d "${DOTFILES_DIR}/config/mpv" ] && link_file "${DOTFILES_DIR}/config/mpv" "${CONF}/mpv"
 
-    # Nothing OS Desktop Shell Config
+    # Nothing OS Desktop Shell Config & Wallpapers
     if [ -f "${DOTFILES_DIR}/config/nothing/config.json" ]; then
         mkdir -p "${CONF}/nothing"
         if [ ! -f "${CONF}/nothing/config.json" ]; then
             cp "${DOTFILES_DIR}/config/nothing/config.json" "${CONF}/nothing/config.json" 2>/dev/null && \
                 log_success "Created ${CONF}/nothing/config.json" || true
+        elif grep -q '"/home/oferg/HardDrive/Downloads/goku.jpg"' "${CONF}/nothing/config.json" 2>/dev/null && [ ! -f "/home/oferg/HardDrive/Downloads/goku.jpg" ]; then
+            sed -i 's|"/home/oferg/HardDrive/Downloads/goku.jpg"|"~/.config/hypr/wallpapers/goku.jpg"|g' "${CONF}/nothing/config.json" 2>/dev/null || true
         fi
     fi
+    mkdir -p "$HOME/Pictures/Wallpapers"
+    for wp in goku.jpg kame.jpg; do
+        [ -f "${DOTFILES_DIR}/config/hypr/wallpapers/${wp}" ] && [ ! -f "$HOME/Pictures/Wallpapers/${wp}" ] && \
+            cp "${DOTFILES_DIR}/config/hypr/wallpapers/${wp}" "$HOME/Pictures/Wallpapers/${wp}" 2>/dev/null || true
+    done
 
     # Vesktop App Configurations
     if [ -d "${DOTFILES_DIR}/config/vesktop" ]; then
@@ -405,8 +412,8 @@ install_system_packages() {
             brightnessctl wl-clipboard cliphist grim slurp swappy wf-recorder swaybg zenity dconf chafa ffmpeg mpv nautilus
             # Polkit
             polkit-kde-agent
-            # Fonts
-            noto-fonts noto-fonts-emoji noto-fonts-cjk ttf-font-awesome ttf-inter
+            # Fonts & Icon Themes
+            noto-fonts noto-fonts-emoji noto-fonts-cjk ttf-font-awesome ttf-inter papirus-icon-theme adwaita-icon-theme hicolor-icon-theme
             # Flatpak
             flatpak
         )
@@ -456,7 +463,7 @@ install_system_packages() {
             xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             # Audio & utilities
             pipewire wireplumber pavucontrol playerctl brightnessctl
-            wl-clipboard cliphist grim slurp swappy wf-recorder swaybg zenity dconf chafa ffmpeg mpv nautilus
+            wl-clipboard cliphist grim slurp swappy wf-recorder swaybg zenity dconf chafa ffmpeg mpv nautilus papirus-icon-theme adwaita-icon-theme hicolor-icon-theme
         )
         sudo dnf install -y --setopt=strict=0 --skip-broken "${fedora_pkgs[@]}" || log_warn "Some core dnf packages failed to install."
 
@@ -506,7 +513,7 @@ install_system_packages() {
             htop btop rclone podman podman-compose
             hyprland hypridle hyprlock hyprland-guiutils quickshell
             qml6-module-qtquick-layouts qml6-module-qtquick-controls qml6-module-qt5compat-graphicaleffects qml6-module-qtquick-effects
-            swaybg waybar wofi foot libnotify-bin
+            swaybg waybar wofi foot libnotify-bin papirus-icon-theme adwaita-icon-theme hicolor-icon-theme yaru-theme-icon
             xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             pipewire pipewire-pulse wireplumber pavucontrol playerctl brightnessctl
             wl-clipboard cliphist grim slurp swappy wf-recorder zenity dconf chafa ffmpeg mpv nautilus
@@ -1124,11 +1131,15 @@ EOF
     mkdir -p "${CONF}/fish/conf.d"
     link_file "${DOTFILES_DIR}/config/fish/conf.d/nothing.fish" "${CONF}/fish/conf.d/nothing.fish"
 
-    # Applications and Icons
+    # Applications and Icons (Nothing X, Vesktop, Discord)
     mkdir -p "${DATA}/applications" "${DATA}/icons/hicolor/scalable/apps" "${DATA}/kio/servicemenus"
     link_file "${DOTFILES_DIR}/applications/nothing-x.desktop" "${DATA}/applications/nothing-x.desktop"
-    link_file "${DOTFILES_DIR}/icons/hicolor/scalable/apps/nothing-x.svg" "${DATA}/icons/hicolor/scalable/apps/nothing-x.svg"
+    for icon_svg in "${DOTFILES_DIR}/icons/hicolor/scalable/apps"/*.svg; do
+        [ -e "$icon_svg" ] || continue
+        link_file "$icon_svg" "${DATA}/icons/hicolor/scalable/apps/$(basename "$icon_svg")"
+    done
     link_file "${DOTFILES_DIR}/applications/servicemenus/nothing-set-wallpaper.desktop" "${DATA}/kio/servicemenus/nothing-set-wallpaper.desktop"
+    has_cmd gtk-update-icon-cache && { gtk-update-icon-cache -f "${DATA}/icons/Nothing" 2>/dev/null || true; gtk-update-icon-cache -f "${DATA}/icons/hicolor" 2>/dev/null || true; }
 
     has_cmd update-desktop-database && update-desktop-database "${DATA}/applications" 2>/dev/null || true
 
