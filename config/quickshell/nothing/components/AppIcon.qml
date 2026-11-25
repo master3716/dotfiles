@@ -36,6 +36,11 @@ Item {
             if (n.includes("://") || n.startsWith("/")) {
                 add(Apps.toImageUrl(n));
             } else {
+                if (Quickshell.hasThemeIcon(n))
+                    add(Apps.toImageUrl(Quickshell.iconPath(n)));
+                const disk = Apps.diskIconMap[n] ?? Apps.diskIconMap[n.toLowerCase()];
+                if (disk)
+                    add(disk);
                 const p = Quickshell.iconPath(n, true);
                 if (p)
                     add(Apps.toImageUrl(p));

@@ -2,6 +2,7 @@ pragma Singleton
 
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import ".."
 
 // Resolve applications via the system's .desktop files.
@@ -48,17 +49,93 @@ Singleton {
     }
 
     // Hyprland class -> .desktop icon name. Without this, iconPath("zen")
-    // finds nothing (the icon is named zen-browser).
+    // finds nothing (the icon is named zen-browser / app.zen_browser.zen).
     readonly property var iconAliases: ({
-        zen: "zen-browser",
+        zen: "app.zen_browser.zen",
+        "zen-browser": "app.zen_browser.zen",
+        "app.zen_browser.zen": "zen-browser",
         helium: "helium-browser",
         "helium-browser": "helium-browser",
         dolphin: "org.kde.dolphin",
         "org.kde.dolphin": "org.kde.dolphin",
-        spotify: "spotify-client",
+        files: "org.gnome.Nautilus",
+        nautilus: "org.gnome.Nautilus",
+        "org.gnome.nautilus": "system-file-manager",
+        spotify: "com.spotify.Client",
+        "spotify-client": "com.spotify.Client",
+        "com.spotify.client": "spotify",
+        vesktop: "dev.vencord.Vesktop",
+        "dev.vencord.vesktop": "vesktop",
+        zapzap: "com.rtosta.zapzap",
+        "com.rtosta.zapzap": "whatsapp",
+        stremio: "com.stremio.Stremio",
+        "com.stremio.stremio": "stremio",
+        ghostty: "com.mitchellh.ghostty",
+        "com.mitchellh.ghostty": "utilities-terminal",
         cursor: "co.anysphere.cursor",
         "co.anysphere.cursor": "co.anysphere.cursor",
     })
+
+    // Direct filesystem icon index populated once at startup so Flatpak, Snap,
+    // hicolor, Yaru, Papirus, and Adwaita icons resolve even if Qt's icon
+    // theme plugin skips them.
+    property var diskIconMap: ({})
+
+    function _iconScore(p: string): int {
+        let s = 0;
+        if (p.indexOf("/apps/") >= 0 || p.indexOf("/pixmaps/") >= 0)
+            s += 100;
+        if (p.endsWith(".svg"))
+            s += 50;
+        else if (p.indexOf("/scalable/") >= 0 || p.indexOf("/256x256/") >= 0 || p.indexOf("/128x128/") >= 0)
+            s += 40;
+        else if (p.indexOf("/96x96/") >= 0 || p.indexOf("/64x64/") >= 0 || p.indexOf("/48x48/") >= 0)
+            s += 30;
+        else if (p.indexOf("/32x32/") >= 0)
+            s += 15;
+        if (p.indexOf("symbolic") >= 0 || p.indexOf("/16x16/") >= 0 || p.indexOf("/22x22/") >= 0 || p.indexOf("/24x24/") >= 0)
+            s -= 80;
+        return s;
+    }
+
+    Process {
+        id: iconScanProc
+        running: true
+        command: [
+            "sh", "-c",
+            "find \"$HOME/.local/share/icons\" \"$HOME/.local/share/flatpak/exports/share/icons\" /var/lib/flatpak/exports/share/icons /usr/share/icons/Papirus-Dark /usr/share/icons/Papirus /usr/share/icons/Qogir-Dark /usr/share/icons/breeze-dark /usr/share/icons/Yaru /usr/share/icons/Adwaita /usr/share/icons/hicolor /usr/share/pixmaps /var/lib/snapd/desktop/icons -maxdepth 6 \\( -type f -o -type l \\) \\( -name '*.svg' -o -name '*.png' -o -name '*.xpm' \\) 2>/dev/null"
+        ]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const lines = text.split("\n");
+                const best = {};
+                const bestScore = {};
+                for (let i = 0; i < lines.length; i++) {
+                    const p = lines[i].trim();
+                    if (!p)
+                        continue;
+                    const slash = p.lastIndexOf("/");
+                    if (slash < 0)
+                        continue;
+                    const fname = p.slice(slash + 1);
+                    const dot = fname.lastIndexOf(".");
+                    if (dot <= 0)
+                        continue;
+                    const stem = fname.slice(0, dot);
+                    const sc = root._iconScore(p);
+                    const keys = [stem, stem.toLowerCase()];
+                    for (let k = 0; k < keys.length; k++) {
+                        const key = keys[k];
+                        if (bestScore[key] === undefined || sc > bestScore[key]) {
+                            bestScore[key] = sc;
+                            best[key] = "file://" + p;
+                        }
+                    }
+                }
+                root.diskIconMap = best;
+            }
+        }
+    }
 
     function iconNames(id: string): var {
         const names = [];
@@ -112,6 +189,9 @@ Singleton {
             }
             if (Quickshell.hasThemeIcon(n))
                 addUrl(root.toImageUrl(Quickshell.iconPath(n)));
+            const disk = root.diskIconMap[n] ?? root.diskIconMap[n.toLowerCase()];
+            if (disk)
+                addUrl(disk);
             const known = root.knownIconFiles[n];
             if (known) {
                 for (let j = 0; j < known.length; j++)

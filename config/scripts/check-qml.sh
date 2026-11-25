@@ -60,8 +60,8 @@ for dp, dn, fn in os.walk(root):
             if f == sing + ".qml":
                 continue
             for m in re.finditer(r"\b%s\.(\w+)" % sing, src):
-                # "Config.qml" in a comment is not a member reference
-                if m.group(1) not in names and m.group(1) != "qml":
+                # "Config.qml" or "...Vesktop.svg" in a string/comment is not a member reference
+                if m.group(1) not in names and m.group(1) not in ("qml", "svg", "png"):
                     bad[sing].add((m.group(1), os.path.relpath(p, root)))
 
 for sing in sorted(bad):
