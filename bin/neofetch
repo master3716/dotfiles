@@ -4,7 +4,8 @@
 # ============================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
-REPO_DATA_DIR="${SCRIPT_DIR}/../data/dragonball"
+REPO_ROOT="${SCRIPT_DIR}/.."
+REPO_DATA_DIR="${REPO_ROOT}/data/dragonball"
 
 DBZ_DIR="${HOME}/.local/share/dragonball-neofetch"
 ANSI_DIR="${DBZ_DIR}/ascii"
@@ -14,6 +15,15 @@ if [[ ! -d "$ANSI_DIR" && -d "${REPO_DATA_DIR}/ascii" ]]; then
 fi
 if [[ ! -f "$MANIFEST" && -f "${REPO_DATA_DIR}/manifest.json" ]]; then
     MANIFEST="${REPO_DATA_DIR}/manifest.json"
+fi
+
+# Self-heal: extract vendored fastfetch if missing from ~/.local/bin and PATH
+ARCH="$(uname -m)"
+VENDOR_FF="${REPO_ROOT}/vendor/bin/${ARCH}/fastfetch.tar.xz"
+if [[ ! -x "${HOME}/.local/bin/fastfetch" ]] && ! command -v fastfetch &>/dev/null && [[ -f "$VENDOR_FF" ]]; then
+    mkdir -p "${HOME}/.local/bin" 2>/dev/null || true
+    tar -xJf "$VENDOR_FF" -C "${HOME}/.local/bin" 2>/dev/null || true
+    chmod +x "${HOME}/.local/bin/fastfetch" 2>/dev/null || true
 fi
 
 if [[ -x "${HOME}/.local/bin/fastfetch" ]]; then
@@ -131,7 +141,9 @@ fi
 
 # Execute fastfetch with neofetch layout and chosen Dragon Ball logo
 if [[ -n "$CHOSEN" && -f "$CHOSEN" ]]; then
-    exec "$FASTFETCH_BIN" -c neofetch --logo-type file --logo "$CHOSEN" --logo-padding-right 3 "$@"
+    "$FASTFETCH_BIN" -c neofetch --logo-type file --logo "$CHOSEN" --logo-padding-right 3 "$@" 2>/dev/null && exit 0
+    exec "$FASTFETCH_BIN" --logo-type file --logo "$CHOSEN" --logo-padding-right 3 "$@"
 else
-    exec "$FASTFETCH_BIN" -c neofetch "$@"
+    "$FASTFETCH_BIN" -c neofetch "$@" 2>/dev/null && exit 0
+    exec "$FASTFETCH_BIN" "$@"
 fi

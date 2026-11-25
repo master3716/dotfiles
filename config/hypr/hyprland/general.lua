@@ -91,10 +91,11 @@ hl.config({
     },
 
     misc = {
-        disable_hyprland_logo    = true,
-        disable_splash_rendering = true,
-        force_default_wallpaper  = 0,
-        focus_on_activate        = true,
+        disable_hyprland_logo           = true,
+        disable_splash_rendering        = true,
+        disable_hyprland_guiutils_check = true,
+        force_default_wallpaper         = 0,
+        focus_on_activate               = true,
         -- Safety net: if a layer is missing, we see black,
         -- not a light gray that clashes with everything else.
         background_color         = "rgba(0b0b0bff)",

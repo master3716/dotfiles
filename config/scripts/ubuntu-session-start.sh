@@ -12,7 +12,12 @@ systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP 
 
 hyprctl setcursor Adwaita 24 2>/dev/null || true
 
-# Start Quickshell Nothing shell; verify it stays alive, else fall back to swaybg + waybar
+# Ensure a wallpaper is always visible (Quickshell renders on top if active)
+if command -v swaybg >/dev/null 2>&1 && [ -f "$HOME/.config/hypr/wallpaper.png" ] && ! pidof -s swaybg >/dev/null 2>&1; then
+    swaybg -i "$HOME/.config/hypr/wallpaper.png" -m fill >/dev/null 2>&1 &
+fi
+
+# Start Quickshell Nothing shell; verify it stays alive, else fall back to waybar
 QS_STARTED=false
 if command -v qs >/dev/null 2>&1 && [ -f "$HOME/.config/quickshell/nothing/shell.qml" ]; then
     if pidof -s quickshell >/dev/null 2>&1; then
@@ -28,9 +33,6 @@ if command -v qs >/dev/null 2>&1 && [ -f "$HOME/.config/quickshell/nothing/shell
 fi
 
 if [ "$QS_STARTED" = false ]; then
-    if command -v swaybg >/dev/null 2>&1 && [ -f "$HOME/.config/hypr/wallpaper.png" ] && ! pidof -s swaybg >/dev/null 2>&1; then
-        swaybg -i "$HOME/.config/hypr/wallpaper.png" -m fill >/dev/null 2>&1 &
-    fi
     if command -v waybar >/dev/null 2>&1 && ! pidof -s waybar >/dev/null 2>&1; then
         waybar >/dev/null 2>&1 &
     fi
