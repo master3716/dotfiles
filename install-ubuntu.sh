@@ -32,6 +32,76 @@ has_cmd() {
     command -v "$1" >/dev/null 2>&1
 }
 
+OFFLINE_MODE=false
+for arg in "$@"; do
+    case "$arg" in
+        --offline|--local) OFFLINE_MODE=true ;;
+    esac
+done
+
+FAILED_ITEMS=()
+
+has_vendor_archive() {
+    local base="$1"
+    [ -f "$base" ] || compgen -G "${base}.part-*" >/dev/null 2>&1
+}
+
+extract_vendor_archive() {
+    local base="$1"
+    local dest="$2"
+    local use_sudo="${3:-}"
+
+    if [ "$use_sudo" = "sudo" ] && has_cmd sudo; then
+        sudo mkdir -p "$dest" 2>/dev/null || return 1
+        if [ -f "$base" ]; then
+            sudo tar -xJf "$base" -C "$dest" 2>/dev/null
+            return $?
+        elif compgen -G "${base}.part-*" >/dev/null 2>&1; then
+            cat "${base}".part-* | sudo tar -xJf - -C "$dest" 2>/dev/null
+            return $?
+        fi
+    else
+        mkdir -p "$dest" 2>/dev/null || return 1
+        if [ -f "$base" ]; then
+            tar -xJf "$base" -C "$dest" 2>/dev/null
+            return $?
+        elif compgen -G "${base}.part-*" >/dev/null 2>&1; then
+            cat "${base}".part-* | tar -xJf - -C "$dest" 2>/dev/null
+            return $?
+        fi
+    fi
+    return 1
+}
+
+record_failure() {
+    local category="$1"
+    local item="$2"
+    local reason="${3:-not available or installation failed}"
+    local entry="[${category}] ${item} (${reason})"
+    local existing
+    for existing in "${FAILED_ITEMS[@]}"; do
+        [ "$existing" = "$entry" ] && return 0
+    done
+    FAILED_ITEMS+=("$entry")
+}
+
+print_summary() {
+    if [ "${#FAILED_ITEMS[@]}" -eq 0 ]; then
+        log_success "All packages, tools, and applications installed successfully!"
+        return 0
+    fi
+
+    printf "\n%b=================================================================%b\n" "${YELLOW}${BOLD}" "${NC}"
+    printf "%b Summary: Items Not Installed                                    %b\n" "${YELLOW}${BOLD}" "${NC}"
+    printf "%b=================================================================%b\n" "${YELLOW}${BOLD}" "${NC}"
+    log_warn "Setup continued and finished the remaining steps, but these items could not be installed:"
+    local item
+    for item in "${FAILED_ITEMS[@]}"; do
+        printf "  %b-%b %s\n" "${YELLOW}" "${NC}" "$item"
+    done
+    printf "\nYou can install or retry any missing items manually later.\n"
+}
+
 # Ensure script runs on Ubuntu / Debian
 if [ -f /etc/os-release ]; then
     . /etc/os-release
@@ -59,21 +129,23 @@ log_info "Setting up Dotfiles & Hyprland for Ubuntu from: ${DOTFILES_DIR}"
 # 1. System Update & Repositories
 # ------------------------------------------------------------------------------
 log_info "Updating package lists..."
-sudo apt-get update -y
+sudo apt-get update -y || log_warn "apt-get update returned warnings."
 
-sudo apt-get install -y --no-install-recommends \
-    software-properties-common \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    wget \
-    gpg
+for prereq in software-properties-common apt-transport-https ca-certificates curl wget gpg; do
+    sudo apt-get install -y --no-install-recommends "$prereq" >/dev/null 2>&1 || \
+        record_failure "apt prerequisite" "$prereq"
+done
 
-# Hyprland PPA for Ubuntu (cppiber/hyprland provides modern builds)
-if ! grep -rq "cppiber/hyprland" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
-    log_info "Adding Hyprland community PPA (ppa:cppiber/hyprland)..."
-    sudo add-apt-repository -y ppa:cppiber/hyprland || log_warn "Could not add ppa:cppiber/hyprland. Will try default repositories."
-    sudo apt-get update -y
+# Hyprland PPA for Ubuntu (only if online and not already in configured/Artifactory repos)
+if [ "$OFFLINE_MODE" = false ] && has_cmd add-apt-repository; then
+    if ! apt-cache show hyprland >/dev/null 2>&1 && ! grep -rq "cppiber/hyprland" /etc/apt/sources.list /etc/apt/sources.list.d/ 2>/dev/null; then
+        log_info "Adding Hyprland community PPA (ppa:cppiber/hyprland)..."
+        sudo add-apt-repository -y ppa:cppiber/hyprland || {
+            log_warn "Could not add ppa:cppiber/hyprland. Will try default repositories."
+            record_failure "apt PPA" "ppa:cppiber/hyprland" "failed to add"
+        }
+        sudo apt-get update -y || true
+    fi
 fi
 
 # ------------------------------------------------------------------------------
@@ -101,9 +173,14 @@ APT_PACKAGES=(
 )
 
 # Install packages allowing failures for optional ones
-for pkg in "${APT_PACKAGES[@]}"; do
-    sudo apt-get install -y "$pkg" 2>/dev/null || log_warn "Optional package $pkg could not be installed via apt."
-done
+if ! sudo apt-get install -y --no-install-recommends "${APT_PACKAGES[@]}" 2>/dev/null; then
+    for pkg in "${APT_PACKAGES[@]}"; do
+        if ! sudo apt-get install -y "$pkg" 2>/dev/null; then
+            log_warn "Optional package $pkg could not be installed via apt."
+            record_failure "apt" "$pkg"
+        fi
+    done
+fi
 
 # Fix Ubuntu command name quirks
 mkdir -p "$BIN"
@@ -115,105 +192,213 @@ if has_cmd fdfind && ! has_cmd fd; then
 fi
 
 # ------------------------------------------------------------------------------
-# 3. Modern CLI Tools (eza, zoxide, zellij, lazygit, neovim, ghostty)
+# 3. Modern CLI Tools (Local Vendor First, Online Fallback)
 # ------------------------------------------------------------------------------
+ARCH="$(uname -m)"
+VENDOR_BIN="${DOTFILES_DIR}/vendor/bin/${ARCH}"
+
 # eza
 if ! has_cmd eza && [ ! -f "$BIN/eza" ]; then
-    log_info "Configuring eza repository..."
-    sudo mkdir -p /etc/apt/keyrings
-    if wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/gierens.gpg 2>/dev/null; then
-        echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null
-        sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list 2>/dev/null || true
-        sudo apt-get update -qq || true
+    if has_vendor_archive "${VENDOR_BIN}/eza.tar.xz"; then
+        log_info "Installing eza from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/eza.tar.xz" "$BIN" && chmod +x "$BIN/eza" 2>/dev/null || true
+    elif apt-cache show eza >/dev/null 2>&1; then
         sudo apt-get install -y eza 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ]; then
+        log_info "Configuring eza repository..."
+        sudo mkdir -p /etc/apt/keyrings 2>/dev/null || true
+        if wget -qO- https://raw.githubusercontent.com/eza-community/eza/main/deb.asc | sudo gpg --dearmor --yes -o /etc/apt/keyrings/gierens.gpg 2>/dev/null; then
+            echo "deb [signed-by=/etc/apt/keyrings/gierens.gpg] http://deb.gierens.de stable main" | sudo tee /etc/apt/sources.list.d/gierens.list >/dev/null || true
+            sudo chmod 644 /etc/apt/keyrings/gierens.gpg /etc/apt/sources.list.d/gierens.list 2>/dev/null || true
+            sudo apt-get update -qq || true
+            sudo apt-get install -y eza 2>/dev/null || true
+        fi
     fi
+fi
+if ! has_cmd eza && [ ! -f "$BIN/eza" ]; then
+    record_failure "CLI tool" "eza"
 fi
 
 # zoxide
-if ! has_cmd zoxide; then
-    log_info "Installing zoxide..."
-    curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh 2>/dev/null || true
+if ! has_cmd zoxide && [ ! -f "$BIN/zoxide" ]; then
+    if has_vendor_archive "${VENDOR_BIN}/zoxide.tar.xz"; then
+        log_info "Installing zoxide from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/zoxide.tar.xz" "$BIN" && chmod +x "$BIN/zoxide" 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ]; then
+        log_info "Installing zoxide..."
+        curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh 2>/dev/null || true
+    fi
+fi
+if ! has_cmd zoxide && [ ! -f "$BIN/zoxide" ]; then
+    record_failure "CLI tool" "zoxide"
 fi
 
 # zellij
 if ! has_cmd zellij && [ ! -f "$BIN/zellij" ]; then
-    log_info "Installing Zellij..."
-    ARCH="$(uname -m)"
-    ZJ_TAR="zellij-${ARCH}-unknown-linux-musl.tar.gz"
-    curl -fsSL "https://github.com/zellij-org/zellij/releases/latest/download/${ZJ_TAR}" -o "/tmp/${ZJ_TAR}" 2>/dev/null || true
-    if [ -f "/tmp/${ZJ_TAR}" ]; then
-        tar -xzf "/tmp/${ZJ_TAR}" -C "$BIN" 2>/dev/null || true
-        chmod +x "$BIN/zellij" 2>/dev/null || true
-        rm -f "/tmp/${ZJ_TAR}"
+    if has_vendor_archive "${VENDOR_BIN}/zellij.tar.xz"; then
+        log_info "Installing zellij from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/zellij.tar.xz" "$BIN" && chmod +x "$BIN/zellij" 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ]; then
+        log_info "Installing Zellij..."
+        ZJ_TAR="zellij-${ARCH}-unknown-linux-musl.tar.gz"
+        curl -fsSL "https://github.com/zellij-org/zellij/releases/latest/download/${ZJ_TAR}" -o "/tmp/${ZJ_TAR}" 2>/dev/null || true
+        if [ -f "/tmp/${ZJ_TAR}" ]; then
+            tar -xzf "/tmp/${ZJ_TAR}" -C "$BIN" 2>/dev/null || true
+            chmod +x "$BIN/zellij" 2>/dev/null || true
+            rm -f "/tmp/${ZJ_TAR}"
+        fi
     fi
+fi
+if ! has_cmd zellij && [ ! -f "$BIN/zellij" ]; then
+    record_failure "CLI tool" "zellij"
 fi
 
 # lazygit
 if ! has_cmd lazygit && [ ! -f "$BIN/lazygit" ]; then
-    log_info "Installing lazygit..."
-    LG_VER="$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*' || echo "0.44.1")"
-    ARCH="$(uname -m)"
-    [ "$ARCH" = "aarch64" ] && LG_ARCH="arm64" || LG_ARCH="x86_64"
-    curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LG_VER}/lazygit_${LG_VER}_Linux_${LG_ARCH}.tar.gz" -o /tmp/lazygit.tar.gz 2>/dev/null || true
-    if [ -f /tmp/lazygit.tar.gz ]; then
-        tar -xzf /tmp/lazygit.tar.gz -C "$BIN" lazygit 2>/dev/null || true
-        chmod +x "$BIN/lazygit" 2>/dev/null || true
-        rm -f /tmp/lazygit.tar.gz
+    if has_vendor_archive "${VENDOR_BIN}/lazygit.tar.xz"; then
+        log_info "Installing lazygit from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/lazygit.tar.xz" "$BIN" && chmod +x "$BIN/lazygit" 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ]; then
+        log_info "Installing lazygit..."
+        LG_VER="$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*' || echo "0.44.1")"
+        [ "$ARCH" = "aarch64" ] && LG_ARCH="arm64" || LG_ARCH="x86_64"
+        curl -fsSL "https://github.com/jesseduffield/lazygit/releases/download/v${LG_VER}/lazygit_${LG_VER}_Linux_${LG_ARCH}.tar.gz" -o /tmp/lazygit.tar.gz 2>/dev/null || true
+        if [ -f /tmp/lazygit.tar.gz ]; then
+            tar -xzf /tmp/lazygit.tar.gz -C "$BIN" lazygit 2>/dev/null || true
+            chmod +x "$BIN/lazygit" 2>/dev/null || true
+            rm -f /tmp/lazygit.tar.gz
+        fi
     fi
+fi
+if ! has_cmd lazygit && [ ! -f "$BIN/lazygit" ]; then
+    record_failure "CLI tool" "lazygit"
 fi
 
 # Neovim (Latest release tarball - Ubuntu's apt version is usually outdated)
-if ! has_cmd nvim || [ "$("$BIN/nvim" --version 2>/dev/null | head -n1 | grep -o '0\.[0-9]*' || echo '0.0')" \< "0.10" ]; then
-    log_info "Installing Neovim (v0.10+ appimage/binary for LazyVim compatibility)..."
-    ARCH="$(uname -m)"
-    if [ "$ARCH" = "x86_64" ]; then
+NEED_NVIM=0
+if ! has_cmd nvim; then
+    NEED_NVIM=1
+else
+    NVIM_RAW_VER="$(nvim --version 2>/dev/null | head -n1 || echo "")"
+    if [[ "$NVIM_RAW_VER" =~ v0\.([0-9]+) ]] && [ "${BASH_REMATCH[1]}" -lt 10 ]; then
+        NEED_NVIM=1
+    fi
+fi
+if [ "$NEED_NVIM" -eq 1 ]; then
+    if has_vendor_archive "${VENDOR_BIN}/nvim-linux-x86_64.tar.xz"; then
+        log_info "Installing Neovim from local repo..."
+        if has_cmd sudo; then
+            sudo rm -rf /opt/nvim-linux-x86_64 2>/dev/null || true
+            extract_vendor_archive "${VENDOR_BIN}/nvim-linux-x86_64.tar.xz" "/opt" "sudo" && \
+                ln -sf /opt/nvim-linux-x86_64/bin/nvim "$BIN/nvim" 2>/dev/null || true
+        else
+            rm -rf "$HOME/.local/opt/nvim-linux-x86_64" 2>/dev/null || true
+            extract_vendor_archive "${VENDOR_BIN}/nvim-linux-x86_64.tar.xz" "$HOME/.local/opt" && \
+                ln -sf "$HOME/.local/opt/nvim-linux-x86_64/bin/nvim" "$BIN/nvim" 2>/dev/null || true
+        fi
+    elif [ "$OFFLINE_MODE" = false ] && [ "$ARCH" = "x86_64" ]; then
+        log_info "Installing Neovim (v0.10+ binary for LazyVim compatibility)..."
         curl -fsSL https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.tar.gz -o /tmp/nvim.tar.gz 2>/dev/null || true
         if [ -f /tmp/nvim.tar.gz ]; then
-            sudo rm -rf /opt/nvim-linux-x86_64
+            sudo rm -rf /opt/nvim-linux-x86_64 2>/dev/null || true
             sudo tar -C /opt -xzf /tmp/nvim.tar.gz 2>/dev/null || true
-            sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim
-            ln -sf /usr/local/bin/nvim "$BIN/nvim"
+            sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/nvim 2>/dev/null || true
+            ln -sf /usr/local/bin/nvim "$BIN/nvim" 2>/dev/null || true
             rm -f /tmp/nvim.tar.gz
         fi
     fi
 fi
+if ! has_cmd nvim; then
+    record_failure "Editor" "neovim"
+fi
 
-# Ghostty terminal (Snap/PPA/binary fallback)
+# Ghostty terminal (apt/Artifactory first, Snap fallback)
 if ! has_cmd ghostty; then
     log_info "Installing Ghostty terminal..."
-    if has_cmd snap; then
+    if apt-cache show ghostty >/dev/null 2>&1; then
+        sudo apt-get install -y ghostty 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ] && has_cmd snap; then
         sudo snap install ghostty --classic 2>/dev/null || true
     fi
+fi
+if ! has_cmd ghostty; then
+    record_failure "Terminal" "ghostty"
 fi
 
 # Antigravity CLI (agy)
 if ! has_cmd agy && [ ! -f "$BIN/agy" ]; then
-    log_info "Installing Antigravity CLI (agy)..."
-    curl -fsSL https://antigravity.google/cli/install.sh | bash 2>/dev/null || \
-        curl -fsSL https://antigravity.dev/install.sh | bash 2>/dev/null || \
+    if has_vendor_archive "${VENDOR_BIN}/agy.tar.xz"; then
+        log_info "Installing Antigravity CLI (agy) from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/agy.tar.xz" "$BIN" && chmod +x "$BIN/agy" 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ]; then
+        log_info "Installing Antigravity CLI (agy)..."
+        curl -fsSL https://antigravity.google/cli/install.sh | bash 2>/dev/null || \
+            curl -fsSL https://antigravity.dev/install.sh | bash 2>/dev/null || true
+    fi
+    if ! has_cmd agy && [ ! -f "$BIN/agy" ]; then
         log_warn "Could not install Antigravity CLI automatically."
+        record_failure "Developer tool" "Antigravity CLI (agy)"
+    fi
 fi
 
 # Astral uv
 if ! has_cmd uv && [ ! -f "$BIN/uv" ]; then
-    log_info "Installing Astral uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh 2>/dev/null || true
+    if has_vendor_archive "${VENDOR_BIN}/uv.tar.xz"; then
+        log_info "Installing Astral uv from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/uv.tar.xz" "$BIN" && chmod +x "$BIN/uv" "$BIN/uvx" 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ]; then
+        log_info "Installing Astral uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh 2>/dev/null || true
+    fi
+fi
+if ! has_cmd uv && [ ! -f "$BIN/uv" ]; then
+    record_failure "Python tool" "uv"
 fi
 
 # Cloudflare Tunnel (cloudflared)
 if ! has_cmd cloudflared && [ ! -f "$BIN/cloudflared" ]; then
-    log_info "Installing cloudflared..."
-    ARCH="$(uname -m)"
-    CF_ARCH="amd64"
-    [ "$ARCH" = "aarch64" ] && CF_ARCH="arm64"
-    curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CF_ARCH}" -o "$BIN/cloudflared" 2>/dev/null || true
-    chmod +x "$BIN/cloudflared" 2>/dev/null || true
+    if has_vendor_archive "${VENDOR_BIN}/cloudflared.tar.xz"; then
+        log_info "Installing cloudflared from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/cloudflared.tar.xz" "$BIN" && chmod +x "$BIN/cloudflared" 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ]; then
+        log_info "Installing cloudflared..."
+        CF_ARCH="amd64"
+        [ "$ARCH" = "aarch64" ] && CF_ARCH="arm64"
+        if curl -fsSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${CF_ARCH}" -o "/tmp/cloudflared" 2>/dev/null; then
+            install -m 755 /tmp/cloudflared "$BIN/cloudflared" 2>/dev/null || true
+            rm -f /tmp/cloudflared
+        else
+            rm -f /tmp/cloudflared
+        fi
+    fi
+fi
+if ! has_cmd cloudflared && [ ! -f "$BIN/cloudflared" ]; then
+    record_failure "CLI tool" "cloudflared"
 fi
 
 # Rclone
 if ! has_cmd rclone && [ ! -f "$BIN/rclone" ]; then
-    log_info "Installing rclone..."
-    curl -fsSL https://rclone.org/install.sh | sudo bash 2>/dev/null || true
+    if has_vendor_archive "${VENDOR_BIN}/rclone.tar.xz"; then
+        log_info "Installing rclone from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/rclone.tar.xz" "$BIN" && chmod +x "$BIN/rclone" 2>/dev/null || true
+    elif [ "$OFFLINE_MODE" = false ]; then
+        log_info "Installing rclone..."
+        curl -fsSL https://rclone.org/install.sh | sudo bash 2>/dev/null || true
+    fi
+fi
+if ! has_cmd rclone && [ ! -f "$BIN/rclone" ]; then
+    record_failure "CLI tool" "rclone"
+fi
+
+# Fastfetch
+if ! has_cmd fastfetch && [ ! -f "$BIN/fastfetch" ]; then
+    if has_vendor_archive "${VENDOR_BIN}/fastfetch.tar.xz"; then
+        log_info "Installing fastfetch from local repo..."
+        extract_vendor_archive "${VENDOR_BIN}/fastfetch.tar.xz" "$BIN" && chmod +x "$BIN/fastfetch" 2>/dev/null || true
+    fi
+fi
+if ! has_cmd fastfetch && [ ! -f "$BIN/fastfetch" ]; then
+    record_failure "CLI tool" "fastfetch"
 fi
 
 # Podman Docker compatibility symlink
@@ -223,11 +408,16 @@ if ! has_cmd docker && has_cmd podman; then
 fi
 
 # ------------------------------------------------------------------------------
-# 4. Fonts
+# 4. Fonts (Local Vendor First)
 # ------------------------------------------------------------------------------
-log_info "Installing MesloLGS NF and JetBrains Mono fonts..."
+log_info "Installing MesloLGS NF and Inter fonts..."
 FONT_DIR="$DATA/fonts"
-mkdir -p "$FONT_DIR"
+mkdir -p "$FONT_DIR/MesloLGS_NF"
+has_vendor_archive "${DOTFILES_DIR}/vendor/fonts/MesloLGS_NF.tar.xz" && \
+    extract_vendor_archive "${DOTFILES_DIR}/vendor/fonts/MesloLGS_NF.tar.xz" "$FONT_DIR" || true
+[ ! -d "${FONT_DIR}/Inter" ] && has_vendor_archive "${DOTFILES_DIR}/vendor/fonts/Inter.tar.xz" && \
+    extract_vendor_archive "${DOTFILES_DIR}/vendor/fonts/Inter.tar.xz" "$FONT_DIR" || true
+
 MESLO_URLS=(
     "https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Regular.ttf"
     "https://github.com/romkatv/powerlevel10k-media/raw/master/MesloLGS%20NF%20Bold.ttf"
@@ -236,8 +426,13 @@ MESLO_URLS=(
 )
 for url in "${MESLO_URLS[@]}"; do
     fname="$(basename "$url" | sed 's/%20/ /g')"
-    if [ ! -f "${FONT_DIR}/${fname}" ]; then
-        curl -fsSL "$url" -o "${FONT_DIR}/${fname}" 2>/dev/null || true
+    if [ ! -f "${FONT_DIR}/${fname}" ] && [ ! -f "${FONT_DIR}/MesloLGS_NF/${fname}" ]; then
+        if [ "$OFFLINE_MODE" = true ]; then
+            record_failure "Font" "$fname" "missing in offline mode"
+        elif ! curl -fsSL "$url" -o "${FONT_DIR}/MesloLGS_NF/${fname}" 2>/dev/null; then
+            rm -f "${FONT_DIR}/MesloLGS_NF/${fname}"
+            record_failure "Font" "$fname" "download failed"
+        fi
     fi
 done
 has_cmd fc-cache && fc-cache -f "$FONT_DIR" 2>/dev/null || true
@@ -264,8 +459,12 @@ link_file "${DOTFILES_DIR}/zsh/.zshrc" "$HOME/.zshrc"
 link_file "${DOTFILES_DIR}/zsh/.zshenv" "$HOME/.zshenv"
 link_file "${DOTFILES_DIR}/zsh/.p10k.zsh" "$HOME/.p10k.zsh"
 
-# Neovim (Tokyo Night)
+# Neovim (Tokyo Night + vendored LazyVim plugins)
 link_file "${DOTFILES_DIR}/config/nvim" "$CONF/nvim"
+if [ ! -d "${DATA}/nvim/lazy/lazy.nvim" ] && has_vendor_archive "${DOTFILES_DIR}/vendor/nvim/lazy.tar.xz"; then
+    log_info "Restoring vendored LazyVim plugins..."
+    extract_vendor_archive "${DOTFILES_DIR}/vendor/nvim/lazy.tar.xz" "${DATA}/nvim" || true
+fi
 
 # Terminals
 link_file "${DOTFILES_DIR}/config/ghostty/config" "$CONF/ghostty/config"
@@ -313,30 +512,51 @@ mkdir -p "$CONF/xdg-desktop-portal"
 link_file "${DOTFILES_DIR}/config/theme/xdg-desktop-portal/hyprland-portals.conf" "$CONF/xdg-desktop-portal/hyprland-portals.conf"
 link_file "${DOTFILES_DIR}/config/theme/xdg-desktop-portal/portals.conf" "$CONF/xdg-desktop-portal/portals.conf"
 
-# Oh My Zsh
+# Oh My Zsh + Powerlevel10k + plugins (Local Vendor First)
+if [ ! -d "$HOME/.oh-my-zsh" ] && has_vendor_archive "${DOTFILES_DIR}/vendor/zsh/oh-my-zsh.tar.xz"; then
+    log_info "Installing Oh My Zsh, Powerlevel10k, and plugins from local repo..."
+    extract_vendor_archive "${DOTFILES_DIR}/vendor/zsh/oh-my-zsh.tar.xz" "$HOME" || true
+fi
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    log_info "Installing Oh My Zsh..."
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended 2>/dev/null || true
-    # Restore link to our zshrc
-    ln -sf "${DOTFILES_DIR}/zsh/.zshrc" "$HOME/.zshrc"
+    if [ "$OFFLINE_MODE" = true ]; then
+        record_failure "Zsh" "oh-my-zsh" "missing in offline mode"
+    else
+        log_info "Installing Oh My Zsh..."
+        if sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended 2>/dev/null; then
+            # Restore link to our zshrc
+            ln -sf "${DOTFILES_DIR}/zsh/.zshrc" "$HOME/.zshrc" 2>/dev/null || true
+        else
+            record_failure "Zsh" "oh-my-zsh" "install failed"
+        fi
+    fi
 fi
 
 # Zsh plugins & theme
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 mkdir -p "$ZSH_CUSTOM/plugins" "$ZSH_CUSTOM/themes"
-[ ! -d "$ZSH_CUSTOM/themes/powerlevel10k" ] && git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k" 2>/dev/null || true
-[ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ] && git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions" 2>/dev/null || true
-[ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ] && git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" 2>/dev/null || true
-[ ! -d "$ZSH_CUSTOM/plugins/fzf-tab" ] && git clone --depth=1 https://github.com/Aloxaf/fzf-tab "$ZSH_CUSTOM/plugins/fzf-tab" 2>/dev/null || true
+if [ ! -d "$ZSH_CUSTOM/themes/powerlevel10k" ]; then
+    [ "$OFFLINE_MODE" = true ] && record_failure "Zsh" "powerlevel10k" || { git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "$ZSH_CUSTOM/themes/powerlevel10k" 2>/dev/null || record_failure "Zsh" "powerlevel10k"; }
+fi
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
+    [ "$OFFLINE_MODE" = true ] && record_failure "Zsh plugin" "zsh-autosuggestions" || { git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions" 2>/dev/null || record_failure "Zsh plugin" "zsh-autosuggestions"; }
+fi
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
+    [ "$OFFLINE_MODE" = true ] && record_failure "Zsh plugin" "zsh-syntax-highlighting" || { git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" 2>/dev/null || record_failure "Zsh plugin" "zsh-syntax-highlighting"; }
+fi
+if [ ! -d "$ZSH_CUSTOM/plugins/fzf-tab" ]; then
+    [ "$OFFLINE_MODE" = true ] && record_failure "Zsh plugin" "fzf-tab" || { git clone --depth=1 https://github.com/Aloxaf/fzf-tab "$ZSH_CUSTOM/plugins/fzf-tab" 2>/dev/null || record_failure "Zsh plugin" "fzf-tab"; }
+fi
 
 # Set default shell to Zsh
-if [ "$SHELL" != "$(command -v zsh)" ]; then
+ZSH_BIN="$(command -v zsh || true)"
+if [ -n "$ZSH_BIN" ] && [ "${SHELL:-}" != "$ZSH_BIN" ]; then
     log_info "Switching default shell to Zsh..."
-    sudo chsh -s "$(command -v zsh)" "$USER" 2>/dev/null || chsh -s "$(command -v zsh)" 2>/dev/null || true
+    sudo chsh -s "$ZSH_BIN" "$USER" 2>/dev/null || chsh -s "$ZSH_BIN" 2>/dev/null || true
 fi
 
 printf "\n%b=================================================================%b\n" "${GREEN}${BOLD}" "${NC}"
-printf "%b Ubuntu Dotfiles & Hyprland Setup Completed Successfully! %b\n" "${GREEN}${BOLD}" "${NC}"
+printf "%b Ubuntu Dotfiles & Hyprland Setup Completed! %b\n" "${GREEN}${BOLD}" "${NC}"
 printf "%b=================================================================%b\n\n" "${GREEN}${BOLD}" "${NC}"
-printf "To start using your new environment, log out and select '%bHyprland%b' at your login screen,\n" "${BOLD}" "${NC}"
+print_summary
+printf "\nTo start using your new environment, log out and select '%bHyprland%b' at your login screen,\n" "${BOLD}" "${NC}"
 printf "or run: %bexec zsh%b\n\n" "${BOLD}" "${NC}"

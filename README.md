@@ -34,6 +34,7 @@ exec zsh
 | Command | Action |
 |---|---|
 | `./install.sh` | **Full One-Command Setup**: Deploys dotfiles, installs system & AUR packages, fonts, Ghostty, Flatpaks (Vesktop, Zen, ZapZap, Spotify), and Nought (Nothing OS) desktop rice |
+| `./install.sh --offline` (or `--local`) | **Offline / Artifactory Mode**: Installs system packages solely from configured `apt`/`dnf`/`pacman` mirrors (e.g., Artifactory) and extracts all non-distro tools, Zsh plugins, fonts, icons, and LazyVim plugins directly from `vendor/` without external internet calls |
 | `./install.sh --core-only` | Installs CLI dotfiles, Zsh ecosystem, fonts, and terminal tools only (skips desktop rice and flatpaks) |
 | `./install.sh --no-flatpak` | Installs everything except Flatpak applications |
 | `./install.sh --ubuntu` (or `-u`) | Runs Ubuntu-specific script (`install-ubuntu.sh`) |
@@ -95,27 +96,21 @@ To ensure cutting-edge packages for Hyprland, Quickshell, and Ghostty, the insta
 
 ---
 
-### 4. Standalone Binaries & Toolchains (Auto-Downloaded)
+### 4. Standalone Binaries, Plugins & Assets (`vendor/` — Local-First)
 
-If not directly available in standard repositories, the installer automatically downloads and stages the following official upstream binaries to `~/.local/bin`:
+Everything outside `apt` / `dnf` / `pacman` is **hosted directly inside `vendor/`** so setups work cleanly in Artifactory or restricted-internet environments (online URLs are only used as a fallback when an architecture isn't vendored and `--offline` is not set):
 
-* **[Antigravity CLI](https://antigravity.google)** (`agy`): DeepMind agentic AI assistant (`curl -fsSL https://antigravity.google/cli/install.sh | bash`)
-* **[Astral uv](https://docs.astral.sh/uv/)** (`uv`, `uvx`): Ultra-fast Python package and project manager (`curl -LsSf https://astral.sh/uv/install.sh | sh`)
-* **[Cloudflare Tunnel](https://github.com/cloudflare/cloudflared)** (`cloudflared`): Official upstream binary from GitHub releases
-* **[Rclone](https://rclone.org/)**: Cloud sync utility (`curl https://rclone.org/install.sh | sudo bash`)
-* **[Neovim](https://neovim.io/) (v0.10+)**: Prebuilt x86_64 tarball from GitHub releases if the distro repository ships an older version (< 0.10)
-* **[zoxide](https://github.com/ajeetdsouza/zoxide)**: Smarter `cd` command installed via `https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh` if not provided by the distro repo
-* **[eza](https://github.com/eza-community/eza)**: Official `x86_64` GitHub release tarball fallback if the package manager did not install it
-* **[Zellij](https://zellij.dev/) & [Lazygit](https://github.com/jesseduffield/lazygit)**: Official upstream GitHub release binaries if not pre-packaged
-* **[Fastfetch](https://github.com/fastfetch-cli/fastfetch)**: Official binary tarball fallback for systems without native packaging
-* **[Ghostty](https://ghostty.org/)**: Falls back to `snap install ghostty --classic` if not available via AUR/Copr/apt repo
-* **[Rust Toolchain](https://rustup.rs/)**: `rustup`, `cargo`, `rust-analyzer` via `https://sh.rustup.rs`
-* **[MesloLGS NF Fonts](https://github.com/romkatv/powerlevel10k-media)**: Meslo Nerd Font variants (Regular, Bold, Italic, Bold Italic) downloaded directly into `~/.local/share/fonts/`
-* **Zsh Ecosystem**:
-  * **[Oh My Zsh](https://github.com/ohmyzsh/ohmyzsh)** (`~/.oh-my-zsh`)
-  * **[Powerlevel10k](https://github.com/romkatv/powerlevel10k)** theme
-  * Plugins: `zsh-autosuggestions`, `zsh-syntax-highlighting`, `fzf-tab`
-* **Python Tooling**: `ipython` (via `pipx`), `spotdl` (via `uv tool` or `pipx`)
+* **[Antigravity CLI](https://antigravity.google)** (`agy`): Vendored in `vendor/bin/x86_64/agy.tar.xz.part-*`
+* **[Astral uv](https://docs.astral.sh/uv/)** (`uv`, `uvx`): Vendored in `vendor/bin/x86_64/uv.tar.xz`
+* **[Cloudflare Tunnel](https://github.com/cloudflare/cloudflared)** (`cloudflared`): Vendored in `vendor/bin/x86_64/cloudflared.tar.xz`
+* **[Rclone](https://rclone.org/)**: Vendored in `vendor/bin/x86_64/rclone.tar.xz`
+* **[Neovim](https://neovim.io/) (v0.10+) & LazyVim Plugins**: Vendored in `vendor/bin/x86_64/nvim-linux-x86_64.tar.xz` and `vendor/nvim/lazy.tar.xz.part-*` (pre-populated into `~/.local/share/nvim/lazy`)
+* **[eza](https://github.com/eza-community/eza), [zoxide](https://github.com/ajeetdsouza/zoxide), [zellij](https://zellij.dev/), [lazygit](https://github.com/jesseduffield/lazygit), [fastfetch](https://github.com/fastfetch-cli/fastfetch)**: Vendored in `vendor/bin/x86_64/`
+* **Fonts (`MesloLGS NF` & `Inter`)**: Vendored in `vendor/fonts/` (`MesloLGS_NF.tar.xz`, `Inter.tar.xz`)
+* **Nothing OS Icons Fallback**: Vendored in `vendor/icons/Nothing.tar.xz` (used if Python `numpy`/`pillow` aren't present to build dynamically)
+* **Zsh Ecosystem (`Oh My Zsh` + `Powerlevel10k` + plugins)**: Vendored in `vendor/zsh/oh-my-zsh.tar.xz` (includes `zsh-autosuggestions`, `zsh-syntax-highlighting`, `fzf-tab`)
+* **[Rust Toolchain](https://rustup.rs/)**: Uses distro `cargo`/`rustc` if provided, or `https://sh.rustup.rs` when online
+* **Python Tooling**: `ipython` (via `pipx`), `spotdl` (via `uv tool` or `pipx`, using configured PyPI / Artifactory)
 * **Container Compatibility**: Automated `docker -> podman` symlink in `~/.local/bin/docker`
 
 ---
