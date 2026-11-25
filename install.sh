@@ -176,6 +176,7 @@ deploy_configs() {
 
     # CLI Executables & Wrappers
     mkdir -p "$HOME/.local/bin" "$DATA/dragonball-neofetch" "$DATA/applications"
+    chmod +x "${DOTFILES_DIR}/bin/"* 2>/dev/null || true
     for bin_file in "${DOTFILES_DIR}/bin"/*; do
         [ -e "$bin_file" ] || continue
         local bname
@@ -401,7 +402,7 @@ install_system_packages() {
             # Audio & PipeWire stack
             pipewire wireplumber pipewire-pulse pipewire-alsa pipewire-jack pavucontrol playerctl
             # Desktop utilities & media
-            brightnessctl wl-clipboard cliphist grim slurp swappy wf-recorder zenity dconf chafa ffmpeg mpv nautilus
+            brightnessctl wl-clipboard cliphist grim slurp swappy wf-recorder swaybg zenity dconf chafa ffmpeg mpv nautilus
             # Polkit
             polkit-kde-agent
             # Fonts
@@ -455,7 +456,7 @@ install_system_packages() {
             xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             # Audio & utilities
             pipewire wireplumber pavucontrol playerctl brightnessctl
-            wl-clipboard cliphist grim slurp swappy wf-recorder zenity dconf chafa ffmpeg mpv nautilus
+            wl-clipboard cliphist grim slurp swappy wf-recorder swaybg zenity dconf chafa ffmpeg mpv nautilus
         )
         sudo dnf install -y --setopt=strict=0 --skip-broken "${fedora_pkgs[@]}" || log_warn "Some core dnf packages failed to install."
 
@@ -503,7 +504,10 @@ install_system_packages() {
             python3 python3-pip python3-venv python3-pil python3-numpy pipx shellcheck direnv
             gcc g++ make cmake fontconfig flatpak
             htop btop rclone podman podman-compose
-            hyprland hypridle hyprlock quickshell xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
+            hyprland hypridle hyprlock hyprland-guiutils quickshell
+            qml6-module-qtquick-layouts qml6-module-qtquick-controls qml6-module-qt5compat-graphicaleffects qml6-module-qtquick-effects
+            swaybg waybar wofi foot libnotify-bin
+            xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             pipewire pipewire-pulse wireplumber pavucontrol playerctl brightnessctl
             wl-clipboard cliphist grim slurp swappy wf-recorder zenity dconf chafa ffmpeg mpv nautilus
         )
@@ -521,6 +525,14 @@ install_system_packages() {
                     esac
                 fi
             done
+        fi
+
+        # Fix Ubuntu command name quirks (batcat -> bat, fdfind -> fd)
+        if has_cmd batcat && ! has_cmd bat; then
+            ln -sf "$(command -v batcat)" "$HOME/.local/bin/bat" 2>/dev/null || true
+        fi
+        if has_cmd fdfind && ! has_cmd fd; then
+            ln -sf "$(command -v fdfind)" "$HOME/.local/bin/fd" 2>/dev/null || true
         fi
 
         # Setup eza repo only if missing from apt/Artifactory and not vendored/offline
@@ -1101,6 +1113,7 @@ EOF
 
     # Nought Desktop & Compositor Configs
     log_info "Deploying Hyprland and Quickshell configs..."
+    chmod +x "${DOTFILES_DIR}/config/scripts/"*.sh 2>/dev/null || true
     link_file "${DOTFILES_DIR}/config/hypr" "${CONF}/hypr"
     mkdir -p "${CONF}/quickshell"
     link_file "${DOTFILES_DIR}/config/quickshell/nothing" "${CONF}/quickshell/nothing"
