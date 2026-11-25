@@ -12,13 +12,19 @@ systemctl --user import-environment WAYLAND_DISPLAY DISPLAY XDG_CURRENT_DESKTOP 
 
 hyprctl setcursor Adwaita 24 2>/dev/null || true
 
-# Start Quickshell Nothing shell; fall back to swaybg + waybar if qs is unavailable
+# Start Quickshell Nothing shell; verify it stays alive, else fall back to swaybg + waybar
 QS_STARTED=false
 if command -v qs >/dev/null 2>&1 && [ -f "$HOME/.config/quickshell/nothing/shell.qml" ]; then
-    if ! pidof -s quickshell >/dev/null 2>&1; then
+    if pidof -s quickshell >/dev/null 2>&1; then
+        QS_STARTED=true
+    else
         qs -p "$HOME/.config/quickshell/nothing" >/tmp/quickshell-nothing.log 2>&1 &
+        QS_PID=$!
+        sleep 1.5
+        if kill -0 "$QS_PID" 2>/dev/null; then
+            QS_STARTED=true
+        fi
     fi
-    QS_STARTED=true
 fi
 
 if [ "$QS_STARTED" = false ]; then

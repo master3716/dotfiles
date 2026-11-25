@@ -205,7 +205,8 @@ APT_PACKAGES=(
     python3 python3-pip python3-venv python3-pil python3-numpy pipx
     # Wayland, Compositor, Shell, Portals & Fallbacks
     hyprland hypridle hyprlock quickshell
-    swaybg waybar wofi foot
+    qml6-module-qtquick-layouts qml6-module-qtquick-controls qml6-module-qt5compat-graphicaleffects qml6-module-qtquick-effects
+    swaybg waybar wofi foot libnotify-bin
     xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     wayland-protocols libwayland-dev
     # Audio & Media
