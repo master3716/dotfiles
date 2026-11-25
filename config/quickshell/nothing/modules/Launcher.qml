@@ -604,6 +604,7 @@ PanelWindow {
                             AppIcon {
                                 anchors.centerIn: parent
                                 size: Theme.px(24)
+                                appId: row.modelData.appId ?? ""
                                 iconName: row.modelData.iconName ?? ""
                                 visible: row.modelData.kind === "app"
                             }

@@ -237,7 +237,7 @@ APT_PACKAGES=(
     # Wayland, Compositor, Shell, Portals & Fallbacks
     hyprland hypridle hyprlock hyprland-guiutils quickshell
     qml6-module-qtquick-layouts qml6-module-qtquick-controls qml6-module-qt5compat-graphicaleffects qml6-module-qtquick-effects
-    qt6-gtk-platformtheme qt6ct
+    qt6-gtk-platformtheme qt6ct qt6-svg-plugins qt6-image-formats-plugins
     swaybg waybar wofi foot libnotify-bin
     xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
     wayland-protocols libwayland-dev

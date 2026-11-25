@@ -608,7 +608,7 @@ Singleton {
                 out.push({
                     kind: "app", title: e.name,
                     subtitle: e.genericName || e.comment || "",
-                    iconName: e.icon, entry: e,
+                    appId: e.id, iconName: e.icon, entry: e,
                     run: () => e.execute()
                 });
             }

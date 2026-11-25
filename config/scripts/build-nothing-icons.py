@@ -86,11 +86,11 @@ DEST = FINAL.with_name(FINAL.name + ".building") if STAGE else FINAL
 GLYPHS = DEST / "glyphs"
 MASTER_SRC = FINAL / "glyphs"
 
-# Applications are deliberately absent: Inherits hands them to Qogir-Dark.
+# Applications are deliberately absent: Inherits hands them to installed themes.
 INDEX = """[Icon Theme]
 Name=Nothing
 Comment=Nothing OS - white glyphs on dark squircles (file manager chrome)
-Inherits=Qogir-Dark,breeze-dark,hicolor
+Inherits=Papirus-Dark,Papirus,Qogir-Dark,Qogir,breeze-dark,breeze,Yaru,Adwaita,AdwaitaLegacy,hicolor
 DisplayDepth=32
 Example=folder
 FollowsColorScheme=false
@@ -476,7 +476,10 @@ def main() -> int:
         shutil.rmtree(DEST, ignore_errors=True)
 
     DEST.mkdir(parents=True, exist_ok=True)
-    (DEST / "index.theme").write_text(INDEX, encoding="utf-8")
+    idx_path = DEST / "index.theme"
+    if idx_path.is_symlink():
+        idx_path.unlink()
+    idx_path.write_text(INDEX, encoding="utf-8")
 
     if RECOLOR and MASTER_SRC.is_dir():
         write_folder_svgs()

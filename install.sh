@@ -404,7 +404,7 @@ install_system_packages() {
             ripgrep fd bat fzf eza zoxide zellij lazygit fastfetch starship neovim htop btop
             podman podman-compose rclone tailscale
             # Hyprland & Wayland stack (quickshell handled via pacman/AUR in install_arch_aur)
-            hyprland hypridle hyprlock hyprpicker hyprsunset
+            hyprland hypridle hyprlock hyprpicker hyprsunset qt6-svg
             xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             # Audio & PipeWire stack
             pipewire wireplumber pipewire-pulse pipewire-alsa pipewire-jack pavucontrol playerctl
@@ -459,7 +459,7 @@ install_system_packages() {
             # CLI tools, monitors, containers & cloud
             fastfetch htop btop rclone podman podman-compose tailscale
             # Hyprland & Quickshell
-            hyprland hypridle hyprlock quickshell
+            hyprland hypridle hyprlock quickshell qt6-qtsvg
             xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             # Audio & utilities
             pipewire wireplumber pavucontrol playerctl brightnessctl
@@ -513,6 +513,7 @@ install_system_packages() {
             htop btop rclone podman podman-compose
             hyprland hypridle hyprlock hyprland-guiutils quickshell
             qml6-module-qtquick-layouts qml6-module-qtquick-controls qml6-module-qt5compat-graphicaleffects qml6-module-qtquick-effects
+            qt6-svg-plugins qt6-image-formats-plugins
             swaybg waybar wofi foot libnotify-bin papirus-icon-theme adwaita-icon-theme hicolor-icon-theme yaru-theme-icon
             xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk
             pipewire pipewire-pulse wireplumber pavucontrol playerctl brightnessctl
