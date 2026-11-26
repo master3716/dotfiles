@@ -1012,6 +1012,8 @@ install_flatpaks() {
         [ ! -f "$ZAPZAP_DIR/ZapZap.conf" ] && { cp "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" "$ZAPZAP_DIR/ZapZap.conf" 2>/dev/null || true; }
         [ ! -f "$HOME/.config/ZapZap/ZapZap.conf" ] && { cp "${DOTFILES_DIR}/config/zapzap/ZapZap.conf" "$HOME/.config/ZapZap/ZapZap.conf" 2>/dev/null || true; }
     fi
+
+    flatpak override --user --socket=wayland --filesystem=xdg-run/pipewire-0 dev.vencord.Vesktop 2>/dev/null || true
 }
 
 # ------------------------------------------------------------------------------

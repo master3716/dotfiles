@@ -312,6 +312,7 @@ install_optional_apps() {
     fi
 
     flatpak override --user --env=XCURSOR_THEME=Adwaita --env=XCURSOR_SIZE=24 2>/dev/null || true
+    flatpak override --user --socket=wayland --filesystem=xdg-run/pipewire-0 dev.vencord.Vesktop 2>/dev/null || true
 }
 
 if [ "$APPS_ONLY" = true ]; then

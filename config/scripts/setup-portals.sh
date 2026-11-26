@@ -5,6 +5,10 @@
 # it can see WAYLAND_DISPLAY) have to be in the preferred list.
 set -uo pipefail
 
+if [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    exit 0
+fi
+
 ROOT="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}/xdg-desktop-portal"
 SRC="$ROOT/theme/xdg-desktop-portal"
