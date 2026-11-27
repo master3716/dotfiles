@@ -306,18 +306,8 @@ hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURC
 hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"),   { locked = true })
 hl.bind(mainMod .. " + ALT + M",   hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { locked = true })
 
--- Discord / Vesktop global deafen (F12 -> Ctrl+Shift+D with down/up pulse)
-local discordClass = "class:.*([Dd]iscord|[Vv]esktop).*"
-hl.bind("F12", function()
-    hl.dispatch(hl.dsp.send_key_state({
-        mods = "CTRL + SHIFT", key = "d", state = "down", window = discordClass,
-    }))
-    hl.timer(function()
-        hl.dispatch(hl.dsp.send_key_state({
-            mods = "CTRL + SHIFT", key = "d", state = "up", window = discordClass,
-        }))
-    end, { timeout = 25, type = "oneshot" })
-end, { locked = true })
+-- Discord / Vesktop global deafen (F12 -> Vesktop IPC socket, fallback Ctrl+Shift+D)
+hl.bind("F12", hl.dsp.exec_cmd("python3 " .. HYPR_DIR .. "/discord-deafen.py"), { locked = true })
 
 hl.bind("XF86MonBrightnessUp",   hl.dsp.global("quickshell:brightnessUp"),
     { locked = true, repeating = true })
